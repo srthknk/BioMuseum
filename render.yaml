@@ -11,7 +11,7 @@ services:
     envVars:
       - key: MONGO_URL
         scope: all
-        value: mongodb+srv://sarthaknk:adminSBES@biomuseum.m30zoo4.mongodb.net/?appName=biomuseum
+        value: mongodb+srv://sarthaknk:adminSBES@biomuseum.m30zoo4.mongodb.net/biomuseum?retryWrites=true&w=majority
       - key: DB_NAME
         scope: all
         value: biomuseum
