@@ -23,17 +23,17 @@ import dns.resolver
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# Local JSON database fallback
-LOCAL_DB_PATH = ROOT_DIR / 'organisms.json'
+# MongoDB setup - REQUIRED, no fallback
+MONGO_URL = os.environ.get('MONGO_URL')
+if not MONGO_URL:
+    raise ValueError("ERROR: MONGO_URL environment variable is not set. MongoDB is required.")
 
-# MongoDB setup
-MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
-USE_MONGODB = True
 db = None
 organisms_collection = None
+mongodb_connected = False
 
 async def init_mongodb():
-    global db, organisms_collection, USE_MONGODB
+    global db, organisms_collection, mongodb_connected
     max_retries = 10
     retry_count = 0
     
@@ -80,11 +80,8 @@ async def init_mongodb():
             # Test that we can actually query
             test_count = await organisms_collection.count_documents({})
             
-            USE_MONGODB = True
+            mongodb_connected = True
             print(f"[OK] ✓ Successfully connected to MongoDB! Found {test_count} organisms in database")
-            
-            # Sync local JSON backup to MongoDB on startup
-            await sync_local_backup_to_mongodb()
             return
             
         except asyncio.TimeoutError:
@@ -103,24 +100,31 @@ async def init_mongodb():
                 print(f"[INFO] Retrying in {wait_time} seconds...")
                 await asyncio.sleep(wait_time)
     
-    print("[CRITICAL] ✗ MongoDB connection failed after all retries")
-    print("[CRITICAL] IMPORTANT: Please check MongoDB Atlas IP whitelist settings")
-    print("[CRITICAL] Make sure 0.0.0.0/0 (allow all IPs) is added or your Render IP is whitelisted")
-    print("[INFO] Using local JSON storage as fallback - data will NOT persist across restarts!")
-    USE_MONGODB = False
-
-async def sync_local_backup_to_mongodb():
-    """Sync local JSON backup to MongoDB after successful connection"""
-    try:
-        local_organisms = load_organisms()
-        if local_organisms:
-            for org in local_organisms:
-                existing = await organisms_collection.find_one({"id": org.get("id")})
-                if not existing:
-                    await organisms_collection.insert_one(org)
-                    print(f"[SYNC] Synced organism to MongoDB: {org.get('name')}")
-    except Exception as e:
-        print(f"[WARN] Error syncing local backup to MongoDB: {str(e)[:80]}...")
+    # FAIL HARD - No fallback to unreliable local storage
+    error_msg = (
+        "\n" + "="*80 + "\n"
+        "[CRITICAL] ✗ MONGODB CONNECTION FAILED - APPLICATION WILL NOT START\n"
+        "\n"
+        "REQUIRED ACTIONS:\n"
+        "1. Check MongoDB Atlas IP whitelist:\n"
+        "   - Go to: https://cloud.mongodb.com\n"
+        "   - Select 'biomuseum' cluster\n"
+        "   - Go to 'Network Access' section\n"
+        "   - Click 'ADD IP ADDRESS'\n"
+        "   - Choose 'ALLOW ACCESS FROM ANYWHERE' and enter 0.0.0.0/0\n"
+        "   - Click 'Confirm'\n"
+        "   - Wait 5-10 minutes for the rule to apply\n"
+        "\n"
+        "2. Verify MongoDB cluster is running and healthy\n"
+        "3. Check your internet connection and network settings\n"
+        "4. Redeploy application after fixing the above\n"
+        "\n"
+        "NOTE: This application requires MongoDB. There is no fallback to\n"
+        "unreliable local storage. All data must be persisted in MongoDB.\n"
+        "="*80
+    )
+    print(error_msg)
+    raise RuntimeError("MongoDB connection failed. Application startup aborted.")
 
 # Define Models
 class OrganismBase(BaseModel):
@@ -159,99 +163,26 @@ class AdminToken(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
-# Database functions
-def load_organisms():
-    if LOCAL_DB_PATH.exists():
-        with open(LOCAL_DB_PATH, 'r') as f:
-            return json.load(f)
-    return []
-
-def save_organisms(organisms):
-    with open(LOCAL_DB_PATH, 'w') as f:
-        json.dump(organisms, f, indent=2, default=str)
-
+# Database functions - MongoDB only (no JSON fallback)
 async def get_organisms_list():
-    if USE_MONGODB:
-        return await organisms_collection.find().to_list(1000)
-    else:
-        return load_organisms()
+    return await organisms_collection.find().to_list(1000)
 
 async def insert_organism(organism_data):
-    if USE_MONGODB:
-        await organisms_collection.insert_one(organism_data)
-    
-    # Always save to local backup for redundancy
-    organisms = load_organisms()
-    organisms.append(organism_data)
-    save_organisms(organisms)
+    await organisms_collection.insert_one(organism_data)
 
 async def find_organism(organism_id):
-    if USE_MONGODB:
-        return await organisms_collection.find_one({"id": organism_id})
-    else:
-        organisms = load_organisms()
-        for org in organisms:
-            if org.get('id') == organism_id:
-                return org
-        return None
+    return await organisms_collection.find_one({"id": organism_id})
 
 async def find_organism_by_qr(qr_code_id):
-    if USE_MONGODB:
-        return await organisms_collection.find_one({"qr_code_id": qr_code_id})
-    else:
-        organisms = load_organisms()
-        for org in organisms:
-            if org.get('qr_code_id') == qr_code_id:
-                return org
-        return None
+    return await organisms_collection.find_one({"qr_code_id": qr_code_id})
 
 async def update_organism_db(organism_id, update_data):
-    if USE_MONGODB:
-        await organisms_collection.update_one({"id": organism_id}, {"$set": update_data})
-        updated_org = await organisms_collection.find_one({"id": organism_id})
-    else:
-        organisms = load_organisms()
-        for i, org in enumerate(organisms):
-            if org.get('id') == organism_id:
-                organisms[i].update(update_data)
-                save_organisms(organisms)
-                return organisms[i]
-        return None
-    
-    # Always update local backup for redundancy
-    organisms = load_organisms()
-    for i, org in enumerate(organisms):
-        if org.get('id') == organism_id:
-            organisms[i].update(update_data)
-            save_organisms(organisms)
-            break
-    
-    return updated_org
+    await organisms_collection.update_one({"id": organism_id}, {"$set": update_data})
+    return await organisms_collection.find_one({"id": organism_id})
 
 async def delete_organism_db(organism_id):
-    deleted = False
-    
-    if USE_MONGODB:
-        result = await organisms_collection.delete_one({"id": organism_id})
-        deleted = result.deleted_count > 0
-    else:
-        organisms = load_organisms()
-        for i, org in enumerate(organisms):
-            if org.get('id') == organism_id:
-                organisms.pop(i)
-                save_organisms(organisms)
-                return True
-        return False
-    
-    # Always delete from local backup for consistency
-    organisms = load_organisms()
-    for i, org in enumerate(organisms):
-        if org.get('id') == organism_id:
-            organisms.pop(i)
-            save_organisms(organisms)
-            break
-    
-    return deleted
+    result = await organisms_collection.delete_one({"id": organism_id})
+    return result.deleted_count > 0
 
 # Helper functions
 def generate_qr_code(organism_id: str) -> str:
