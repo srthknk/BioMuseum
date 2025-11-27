@@ -15,6 +15,8 @@ import io
 import base64
 import hashlib
 import json
+import ssl
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -30,21 +32,55 @@ organisms_collection = None
 
 async def init_mongodb():
     global db, organisms_collection, USE_MONGODB
-    try:
-        client = AsyncIOMotorClient(MONGO_URL, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000)
-        # Verify connection
-        await client.admin.command('ping')
-        db = client[os.environ.get('DB_NAME', 'biomuseum')]
-        organisms_collection = db.organisms
-        USE_MONGODB = True
-        print("[OK] Connected to MongoDB")
-        
-        # Sync local JSON backup to MongoDB on startup
-        await sync_local_backup_to_mongodb()
-    except Exception as e:
-        print(f"[WARN] MongoDB connection failed: {str(e)[:80]}...")
-        print("[INFO] Using local JSON storage as fallback")
-        USE_MONGODB = False
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            # Create SSL context for secure connections
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = True
+            ssl_context.verify_mode = ssl.CERT_REQUIRED
+            
+            # Build connection options
+            client_kwargs = {
+                'serverSelectionTimeoutMS': 10000,
+                'connectTimeoutMS': 10000,
+                'retryWrites': True,
+                'ssl': True,
+                'tlsCAFile': None,  # Use system CA certificates
+                'tlsAllowInvalidCertificates': False,
+                'tlsAllowInvalidHostnames': False,
+            }
+            
+            client = AsyncIOMotorClient(MONGO_URL, **client_kwargs)
+            
+            # Verify connection with timeout
+            await asyncio.wait_for(client.admin.command('ping'), timeout=10)
+            
+            db = client[os.environ.get('DB_NAME', 'biomuseum')]
+            organisms_collection = db.organisms
+            USE_MONGODB = True
+            print("[OK] Connected to MongoDB successfully")
+            
+            # Sync local JSON backup to MongoDB on startup
+            await sync_local_backup_to_mongodb()
+            return
+            
+        except asyncio.TimeoutError:
+            retry_count += 1
+            print(f"[WARN] MongoDB connection timeout (attempt {retry_count}/{max_retries})")
+            if retry_count < max_retries:
+                await asyncio.sleep(2 ** retry_count)  # Exponential backoff
+        except Exception as e:
+            retry_count += 1
+            error_msg = str(e)[:120]
+            print(f"[WARN] MongoDB connection failed (attempt {retry_count}/{max_retries}): {error_msg}")
+            if retry_count < max_retries:
+                await asyncio.sleep(2 ** retry_count)  # Exponential backoff
+    
+    print("[INFO] MongoDB connection failed after retries. Using local JSON storage as fallback")
+    USE_MONGODB = False
 
 async def sync_local_backup_to_mongodb():
     """Sync local JSON backup to MongoDB after successful connection"""
