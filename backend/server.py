@@ -38,10 +38,26 @@ async def init_mongodb():
         organisms_collection = db.organisms
         USE_MONGODB = True
         print("[OK] Connected to MongoDB")
+        
+        # Sync local JSON backup to MongoDB on startup
+        await sync_local_backup_to_mongodb()
     except Exception as e:
         print(f"[WARN] MongoDB connection failed: {str(e)[:80]}...")
         print("[INFO] Using local JSON storage as fallback")
         USE_MONGODB = False
+
+async def sync_local_backup_to_mongodb():
+    """Sync local JSON backup to MongoDB after successful connection"""
+    try:
+        local_organisms = load_organisms()
+        if local_organisms:
+            for org in local_organisms:
+                existing = await organisms_collection.find_one({"id": org.get("id")})
+                if not existing:
+                    await organisms_collection.insert_one(org)
+                    print(f"[SYNC] Synced organism to MongoDB: {org.get('name')}")
+    except Exception as e:
+        print(f"[WARN] Error syncing local backup to MongoDB: {str(e)[:80]}...")
 
 # Define Models
 class OrganismBase(BaseModel):
@@ -100,10 +116,11 @@ async def get_organisms_list():
 async def insert_organism(organism_data):
     if USE_MONGODB:
         await organisms_collection.insert_one(organism_data)
-    else:
-        organisms = load_organisms()
-        organisms.append(organism_data)
-        save_organisms(organisms)
+    
+    # Always save to local backup for redundancy
+    organisms = load_organisms()
+    organisms.append(organism_data)
+    save_organisms(organisms)
 
 async def find_organism(organism_id):
     if USE_MONGODB:
@@ -128,7 +145,7 @@ async def find_organism_by_qr(qr_code_id):
 async def update_organism_db(organism_id, update_data):
     if USE_MONGODB:
         await organisms_collection.update_one({"id": organism_id}, {"$set": update_data})
-        return await organisms_collection.find_one({"id": organism_id})
+        updated_org = await organisms_collection.find_one({"id": organism_id})
     else:
         organisms = load_organisms()
         for i, org in enumerate(organisms):
@@ -137,11 +154,23 @@ async def update_organism_db(organism_id, update_data):
                 save_organisms(organisms)
                 return organisms[i]
         return None
+    
+    # Always update local backup for redundancy
+    organisms = load_organisms()
+    for i, org in enumerate(organisms):
+        if org.get('id') == organism_id:
+            organisms[i].update(update_data)
+            save_organisms(organisms)
+            break
+    
+    return updated_org
 
 async def delete_organism_db(organism_id):
+    deleted = False
+    
     if USE_MONGODB:
         result = await organisms_collection.delete_one({"id": organism_id})
-        return result.deleted_count > 0
+        deleted = result.deleted_count > 0
     else:
         organisms = load_organisms()
         for i, org in enumerate(organisms):
@@ -150,6 +179,16 @@ async def delete_organism_db(organism_id):
                 save_organisms(organisms)
                 return True
         return False
+    
+    # Always delete from local backup for consistency
+    organisms = load_organisms()
+    for i, org in enumerate(organisms):
+        if org.get('id') == organism_id:
+            organisms.pop(i)
+            save_organisms(organisms)
+            break
+    
+    return deleted
 
 # Helper functions
 def generate_qr_code(organism_id: str) -> str:
