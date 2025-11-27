@@ -17,6 +17,8 @@ import hashlib
 import json
 import ssl
 import asyncio
+import socket
+import dns.resolver
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -32,8 +34,18 @@ organisms_collection = None
 
 async def init_mongodb():
     global db, organisms_collection, USE_MONGODB
-    max_retries = 5
+    max_retries = 10
     retry_count = 0
+    
+    # Test DNS resolution first
+    try:
+        print("[INFO] Testing DNS resolution for MongoDB...")
+        dns_records = await asyncio.get_event_loop().getaddrinfo(
+            'ac-ojscwyo-shard-00-00.m30zoo4.mongodb.net', 27017
+        )
+        print(f"[OK] DNS resolved successfully: {len(dns_records)} records found")
+    except Exception as e:
+        print(f"[WARN] DNS resolution failed: {str(e)[:100]}")
     
     while retry_count < max_retries:
         try:
@@ -41,29 +53,35 @@ async def init_mongodb():
             
             # Build connection options with extended timeouts for Render
             client_kwargs = {
-                'serverSelectionTimeoutMS': 30000,      # 30 seconds
-                'connectTimeoutMS': 30000,               # 30 seconds
-                'socketTimeoutMS': 30000,                # 30 seconds
-                'maxPoolSize': 5,
-                'minPoolSize': 1,
+                'serverSelectionTimeoutMS': 60000,      # 60 seconds
+                'connectTimeoutMS': 60000,               # 60 seconds
+                'socketTimeoutMS': 60000,                # 60 seconds
+                'maxPoolSize': 3,
+                'minPoolSize': 0,
                 'retryWrites': True,
                 'retryReads': True,
                 'ssl': True,
                 'tlsAllowInvalidCertificates': False,
                 'tlsAllowInvalidHostnames': False,
                 'appName': 'biomuseum',
+                'family': socket.AF_INET,  # Force IPv4
             }
             
+            print(f"[INFO] MongoDB URL: {MONGO_URL[:50]}...")
             client = AsyncIOMotorClient(MONGO_URL, **client_kwargs)
             
             # Verify connection with extended timeout
-            print("[INFO] Verifying MongoDB connection...")
-            await asyncio.wait_for(client.admin.command('ping'), timeout=30)
+            print("[INFO] Verifying MongoDB connection with ping command...")
+            await asyncio.wait_for(client.admin.command('ping'), timeout=60)
             
             db = client[os.environ.get('DB_NAME', 'biomuseum')]
             organisms_collection = db.organisms
+            
+            # Test that we can actually query
+            test_count = await organisms_collection.count_documents({})
+            
             USE_MONGODB = True
-            print("[OK] ✓ Successfully connected to MongoDB")
+            print(f"[OK] ✓ Successfully connected to MongoDB! Found {test_count} organisms in database")
             
             # Sync local JSON backup to MongoDB on startup
             await sync_local_backup_to_mongodb()
@@ -73,19 +91,22 @@ async def init_mongodb():
             retry_count += 1
             print(f"[WARN] MongoDB connection timeout (attempt {retry_count}/{max_retries})")
             if retry_count < max_retries:
-                wait_time = min(10, 2 ** retry_count)  # Cap at 10 seconds
+                wait_time = min(15, 3 ** (retry_count - 1))  # Exponential backoff: 1, 3, 9, 15, 15...
                 print(f"[INFO] Retrying in {wait_time} seconds...")
                 await asyncio.sleep(wait_time)
         except Exception as e:
             retry_count += 1
-            error_msg = str(e)[:150]
+            error_msg = str(e)[:200]
             print(f"[WARN] MongoDB connection error (attempt {retry_count}/{max_retries}): {error_msg}")
             if retry_count < max_retries:
-                wait_time = min(10, 2 ** retry_count)  # Cap at 10 seconds
+                wait_time = min(15, 3 ** (retry_count - 1))  # Exponential backoff: 1, 3, 9, 15, 15...
                 print(f"[INFO] Retrying in {wait_time} seconds...")
                 await asyncio.sleep(wait_time)
     
-    print("[CRITICAL] ✗ MongoDB connection failed after all retries. Using local JSON storage as fallback")
+    print("[CRITICAL] ✗ MongoDB connection failed after all retries")
+    print("[CRITICAL] IMPORTANT: Please check MongoDB Atlas IP whitelist settings")
+    print("[CRITICAL] Make sure 0.0.0.0/0 (allow all IPs) is added or your Render IP is whitelisted")
+    print("[INFO] Using local JSON storage as fallback - data will NOT persist across restarts!")
     USE_MONGODB = False
 
 async def sync_local_backup_to_mongodb():
