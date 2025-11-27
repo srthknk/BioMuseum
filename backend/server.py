@@ -34,7 +34,7 @@ mongodb_connected = False
 
 async def init_mongodb():
     global db, organisms_collection, mongodb_connected
-    max_retries = 10
+    max_retries = 15  # Increased from 10 to 15
     retry_count = 0
     
     # Test DNS resolution first
@@ -53,9 +53,9 @@ async def init_mongodb():
             
             # Build connection options with extended timeouts for Render
             client_kwargs = {
-                'serverSelectionTimeoutMS': 60000,      # 60 seconds
-                'connectTimeoutMS': 60000,               # 60 seconds
-                'socketTimeoutMS': 60000,                # 60 seconds
+                'serverSelectionTimeoutMS': 120000,     # 120 seconds
+                'connectTimeoutMS': 120000,              # 120 seconds
+                'socketTimeoutMS': 120000,               # 120 seconds
                 'maxPoolSize': 3,
                 'minPoolSize': 0,
                 'retryWrites': True,
@@ -72,7 +72,7 @@ async def init_mongodb():
             
             # Verify connection with extended timeout
             print("[INFO] Verifying MongoDB connection with ping command...")
-            await asyncio.wait_for(client.admin.command('ping'), timeout=60)
+            await asyncio.wait_for(client.admin.command('ping'), timeout=120)
             
             db = client[os.environ.get('DB_NAME', 'biomuseum')]
             organisms_collection = db.organisms
@@ -88,7 +88,7 @@ async def init_mongodb():
             retry_count += 1
             print(f"[WARN] MongoDB connection timeout (attempt {retry_count}/{max_retries})")
             if retry_count < max_retries:
-                wait_time = min(15, 3 ** (retry_count - 1))  # Exponential backoff: 1, 3, 9, 15, 15...
+                wait_time = min(20, 5 ** (retry_count - 1) // 50)  # Increased wait time
                 print(f"[INFO] Retrying in {wait_time} seconds...")
                 await asyncio.sleep(wait_time)
         except Exception as e:
@@ -96,7 +96,7 @@ async def init_mongodb():
             error_msg = str(e)[:200]
             print(f"[WARN] MongoDB connection error (attempt {retry_count}/{max_retries}): {error_msg}")
             if retry_count < max_retries:
-                wait_time = min(15, 3 ** (retry_count - 1))  # Exponential backoff: 1, 3, 9, 15, 15...
+                wait_time = min(20, 5 ** (retry_count - 1) // 50)  # Increased wait time
                 print(f"[INFO] Retrying in {wait_time} seconds...")
                 await asyncio.sleep(wait_time)
     
@@ -106,25 +106,36 @@ async def init_mongodb():
         "[CRITICAL] ✗ MONGODB CONNECTION FAILED - APPLICATION WILL NOT START\n"
         "\n"
         "REQUIRED ACTIONS:\n"
-        "1. Check MongoDB Atlas IP whitelist:\n"
+        "1. Configure MongoDB Atlas IP Whitelist IMMEDIATELY:\n"
         "   - Go to: https://cloud.mongodb.com\n"
+        "   - Log in with your account\n"
         "   - Select 'biomuseum' cluster\n"
-        "   - Go to 'Network Access' section\n"
+        "   - Go to 'Network Access' in the left sidebar\n"
         "   - Click 'ADD IP ADDRESS'\n"
-        "   - Choose 'ALLOW ACCESS FROM ANYWHERE' and enter 0.0.0.0/0\n"
+        "   - Click 'ALLOW ACCESS FROM ANYWHERE'\n"
+        "   - Enter 0.0.0.0/0 (allows all IPs)\n"
         "   - Click 'Confirm'\n"
-        "   - Wait 5-10 minutes for the rule to apply\n"
+        "   - WAIT 5-10 MINUTES for the rule to apply\n"
         "\n"
-        "2. Verify MongoDB cluster is running and healthy\n"
-        "3. Check your internet connection and network settings\n"
-        "4. Redeploy application after fixing the above\n"
+        "2. Verify your MongoDB cluster is running:\n"
+        "   - Go to MongoDB Atlas Dashboard\n"
+        "   - Check cluster status is 'Running'\n"
+        "   - No alerts or warnings\n"
         "\n"
-        "NOTE: This application requires MongoDB. There is no fallback to\n"
-        "unreliable local storage. All data must be persisted in MongoDB.\n"
+        "3. After whitelist is configured, REDEPLOY on Render:\n"
+        "   - Go to your Render dashboard\n"
+        "   - Click 'Manual Deploy' or push new commit to GitHub\n"
+        "\n"
+        "Current credentials:\n"
+        f"   - URL: {MONGO_URL[:60]}...\n"
+        f"   - Database: {os.environ.get('DB_NAME', 'biomuseum')}\n"
+        "\n"
+        "NOTE: This application requires MongoDB. There is NO fallback\n"
+        "to local storage. All data MUST persist in MongoDB.\n"
         "="*80
     )
     print(error_msg)
-    raise RuntimeError("MongoDB connection failed. Application startup aborted.")
+    raise RuntimeError("MongoDB connection failed after 15 retry attempts. See error message above.")
 
 # Define Models
 class OrganismBase(BaseModel):
