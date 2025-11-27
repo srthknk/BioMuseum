@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# render.yaml - Render deployment configuration
+
+services:
+  - type: web
+    name: biomuseum-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MONGO_URL
+        scope: all
+        value: mongodb+srv://sarthaknk:adminSBES@biomuseum.m30zoo4.mongodb.net/?appName=biomuseum
+      - key: DB_NAME
+        scope: all
+        value: biomuseum
+      - key: CORS_ORIGINS
+        scope: all
+        value: http://localhost:3000,http://localhost:3001,https://biomuseum.vercel.app
+      - key: FRONTEND_URL
+        scope: all
+        value: https://biomuseum.vercel.app
