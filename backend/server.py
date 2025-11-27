@@ -289,8 +289,8 @@ app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*"],   # allow all origins
+    allow_credentials=False,  # must be FALSE when using "*"
     allow_methods=["*"],
     allow_headers=["*"],
 )
