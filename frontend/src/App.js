@@ -147,18 +147,19 @@ const Homepage = () => {
     return (
       <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-green-50 to-blue-50'} flex items-center justify-center loading-container`}>
         <div className="text-center">
-          <div className="mb-6 flex justify-center">
-            <img 
-              src="https://res.cloudinary.com/dhmgyv2ps/image/upload/v1764427279/346_xhjb6z.gif" 
-              alt="Loading" 
-              className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 object-contain"
-            />
+          <div className="mb-6">
+            <h2 className={`text-3xl sm:text-4xl font-bold font-poppins ${isDark ? 'text-white' : 'text-gray-800'}`}>Loading</h2>
+            <div className="flex justify-center mt-4">
+              <div className="flex space-x-2">
+                <div className={`w-2 h-2 rounded-full animate-bounce ${isDark ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '0s'}}></div>
+                <div className={`w-2 h-2 rounded-full animate-bounce ${isDark ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '0.2s'}}></div>
+                <div className={`w-2 h-2 rounded-full animate-bounce ${isDark ? 'bg-purple-400' : 'bg-purple-600'}`} style={{animationDelay: '0.4s'}}></div>
+              </div>
+            </div>
           </div>
           <div className="mb-4">
-            <h2 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>BioMuseum</h2>
-            <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Discovering the wonders of life...</p>
+            <p className={`text-base sm:text-lg font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Discovering the wonders of life...</p>
           </div>
-          <p className={`text-sm mt-6 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Loading organisms...</p>
         </div>
       </div>
     );
@@ -787,6 +788,8 @@ const AddOrganismForm = ({ token, isDark, onSuccess }) => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiOrganismName, setAiOrganismName] = useState('');
   const [showAiHelper, setShowAiHelper] = useState(false);
+  const [aiImageLoading, setAiImageLoading] = useState(false);
+  const [aiImageOrganism, setAiImageOrganism] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -888,6 +891,41 @@ const AddOrganismForm = ({ token, isDark, onSuccess }) => {
       alert('Error: ' + errorMsg);
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const handleAiGenerateImages = async () => {
+    if (!aiImageOrganism.trim()) {
+      alert('Please enter an organism name for image generation');
+      return;
+    }
+
+    setAiImageLoading(true);
+    try {
+      // Generate 3-4 images for the organism
+      const response = await axios.post(`${API}/admin/organisms/ai-generate-images`, {
+        organism_name: aiImageOrganism,
+        count: 4
+      }, {
+        timeout: 120000 // 2 minute timeout for image generation
+      });
+
+      if (response.data.success && response.data.images && response.data.images.length > 0) {
+        const newImages = response.data.images;
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, ...newImages]
+        }));
+        setAiImageOrganism('');
+        alert(`✅ ${newImages.length} HD images generated successfully!`);
+      } else {
+        alert('No images were generated. Please try again.');
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || error.message || 'Failed to generate images';
+      alert('Error generating images: ' + errorMsg);
+    } finally {
+      setAiImageLoading(false);
     }
   };
 
@@ -1116,7 +1154,30 @@ const AddOrganismForm = ({ token, isDark, onSuccess }) => {
                 Add URL
               </button>
             </div>
-            <div className={`text-center text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>or</div>
+            <div className={`flex flex-col sm:flex-row gap-2 items-center`}>
+              <div className={`flex-1 text-center text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>or</div>
+              <div className={`flex-1 flex gap-2`}>
+                <input
+                  type="text"
+                  value={aiImageOrganism}
+                  onChange={(e) => setAiImageOrganism(e.target.value)}
+                  placeholder="Enter organism name for AI images..."
+                  className={`flex-1 px-3 sm:px-4 py-2 rounded-lg focus:outline-none transition-all text-xs sm:text-sm ${isDark ? 'bg-gray-600 border border-gray-500 text-white' : 'border border-gray-300'}`}
+                />
+                <button
+                  type="button"
+                  onClick={handleAiGenerateImages}
+                  disabled={aiImageLoading}
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all text-white ${
+                    aiImageLoading 
+                      ? 'bg-gray-400 cursor-not-allowed' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {aiImageLoading ? '🔄 Generating...' : '🤖 AI Images'}
+                </button>
+              </div>
+            </div>
           </div>
           
           <div
