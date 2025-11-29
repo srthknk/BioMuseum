@@ -150,49 +150,113 @@ const Homepage = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-linear-to-br from-green-50 to-blue-50">
-      {/* Header */}
-      <header className="bg-white shadow-lg border-b-4 border-green-600">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="text-center md:text-left mb-4 md:mb-0">
-              <h1 className="text-4xl font-bold text-gray-800 mb-2">🧬 Biology Museum</h1>
-              <p className="text-gray-600">Discover the wonders of life science</p>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Navbar - Smaller Version */}
+      <header className="bg-white shadow-md border-b-2 border-green-600 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex justify-between items-center">
+            <div className="text-left">
+              <h1 className="text-2xl font-bold text-gray-800">BioMuseum</h1>
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowAdminLogin(true)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2"
               >
-                🔐 Admin
+                <i className="fas fa-shield-alt"></i> Admin
               </button>
             </div>
           </div>
         </div>
       </header>
 
+      {/* Hero Section with Video Background */}
+      <div className="relative h-96 overflow-hidden">
+        <video 
+          autoPlay 
+          muted 
+          loop 
+          className="absolute top-0 left-0 w-full h-full object-cover"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4))'
+          }}
+        >
+          <source src="file:///C:/Users/sarth/Downloads/Generated%20File%20November%2029,%202025%20-%206_34PM.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        
+        {/* Overlay for text */}
+        <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center">
+          <div className="text-center text-white px-4">
+            <h2 className="text-5xl font-bold mb-4">BioMuseum: A Journey Through Living Wonders</h2>
+            <p className="text-xl mb-8 max-w-2xl mx-auto">
+              Discover the wonders of life science through our interactive biology museum. Learn about diverse organisms and their fascinating characteristics.
+            </p>
+            <button
+              onClick={() => {
+                document.querySelector('[data-organisms-section]')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold text-lg transition-colors inline-flex items-center gap-2"
+            >
+              <i className="fas fa-arrow-right"></i> Explore
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
       <main className="flex-1">
 
-      {/* Search Section */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <form onSubmit={handleSearch} className="mb-8">
-          <div className="flex gap-2 max-w-2xl mx-auto">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search organisms by name or scientific name..."
-              className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-            >
-              Search
-            </button>
+      {/* Organisms Section with Filters */}
+      <div className="max-w-7xl mx-auto px-4 py-12" data-organisms-section>
+        <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">Explore Organisms</h2>
+        
+        {/* Filter Section */}
+        <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Kingdom Filter */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                <i className="fas fa-filter mr-2"></i>Filter by Kingdom
+              </label>
+              <select
+                onChange={(e) => {
+                  const filtered = e.target.value 
+                    ? organisms.filter(org => org.classification?.kingdom === e.target.value)
+                    : organisms;
+                  setOrganisms(filtered);
+                }}
+                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
+              >
+                <option value="">All Kingdoms</option>
+                {[...new Set(organisms.map(org => org.classification?.kingdom).filter(Boolean))].map(kingdom => (
+                  <option key={kingdom} value={kingdom}>{kingdom}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Phylum Filter */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">
+                <i className="fas fa-filter mr-2"></i>Filter by Phylum
+              </label>
+              <select
+                onChange={(e) => {
+                  const filtered = e.target.value 
+                    ? organisms.filter(org => org.classification?.phylum === e.target.value)
+                    : organisms;
+                  setOrganisms(filtered);
+                }}
+                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
+              >
+                <option value="">All Phyla</option>
+                {[...new Set(organisms.map(org => org.classification?.phylum).filter(Boolean))].map(phylum => (
+                  <option key={phylum} value={phylum}>{phylum}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        </form>
+        </div>
 
         {/* Organisms Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -243,7 +307,7 @@ const Homepage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* About Section */}
             <div>
-              <h3 className="text-2xl font-bold mb-4">🧬 BioMuseum</h3>
+              <h3 className="text-2xl font-bold mb-4">BioMuseum</h3>
               <p className="text-gray-300 text-sm">
                 Discover the wonders of life science through our interactive biology museum. 
                 Learn about diverse organisms and their fascinating characteristics.
@@ -254,8 +318,8 @@ const Homepage = () => {
             <div>
               <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-gray-300 text-sm">
-                <li><a href="/" className="hover:text-green-400 transition-colors">🏠 Home</a></li>
-               <li><a onClick={() => setShowAdminLogin(true)} className="hover:text-green-400 transition-colors cursor-pointer">🔐 Admin Panel</a></li>
+                <li><a href="/" className="hover:text-green-400 transition-colors"><i className="fas fa-home mr-2"></i>Home</a></li>
+               <li><a onClick={() => setShowAdminLogin(true)} className="hover:text-green-400 transition-colors cursor-pointer"><i className="fas fa-shield-alt mr-2"></i>Admin Panel</a></li>
               </ul>
             </div>
 
@@ -263,9 +327,8 @@ const Homepage = () => {
             <div>
               <h4 className="text-lg font-semibold mb-4">Contact & Social</h4>
               <ul className="space-y-2 text-gray-300 text-sm">
-                <li>📧 Email: sarthaknk07@outlook.com</li>
-                <li>📍 Location : Zoology Department, SBES College of Science</li>
-                <li></li>
+                <li><i className="fas fa-envelope mr-2"></i>Email: sarthaknk07@outlook.com</li>
+                <li><i className="fas fa-map-marker-alt mr-2"></i>Location : Zoology Department, SBES College of Science</li>
               </ul>
             </div>
           </div>
@@ -275,8 +338,7 @@ const Homepage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <p className="text-gray-400 text-sm">
                 © Made with Love @ Chh.SambhajiNagar.
-                 <h5>Created by Sarthak N. Kulkarni B.Sc First Year</h5>
-                
+                 <h5 className="mt-2">Created by Sarthak N. Kulkarni B.Sc First Year</h5>
               </p>
               <div className="text-right text-gray-400 text-sm">
                
