@@ -420,14 +420,8 @@ const OrganismDetail = () => {
     return (
       <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-green-50 to-blue-50'} flex items-center justify-center`}>
         <div className="text-center px-4">
-          <div className="mb-6 flex justify-center">
-            <img 
-              src="https://res.cloudinary.com/dhmgyv2ps/image/upload/v1764427279/346_xhjb6z.gif" 
-              alt="Loading" 
-              className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 object-contain"
-            />
-          </div>
-          <p className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>Loading organism details...</p>
+          <div className="text-6xl mb-6 animate-bounce">⏳</div>
+          <p className="text-lg font-semibold text-gray-800">Loading organism details...</p>
         </div>
       </div>
     );
@@ -910,8 +904,8 @@ const AddOrganismForm = ({ token, isDark, onSuccess }) => {
         timeout: 120000 // 2 minute timeout for image generation
       });
 
-      if (response.data.success && response.data.images && response.data.images.length > 0) {
-        const newImages = response.data.images;
+      if (response.data.success && response.data.image_urls && response.data.image_urls.length > 0) {
+        const newImages = response.data.image_urls;
         setFormData(prev => ({
           ...prev,
           images: [...prev.images, ...newImages]
@@ -922,7 +916,8 @@ const AddOrganismForm = ({ token, isDark, onSuccess }) => {
         alert('No images were generated. Please try again.');
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || error.message || 'Failed to generate images';
+      const errorMsg = error.response?.data?.message || error.response?.data?.detail || error.message || 'Failed to generate images';
+      console.error('Image generation error:', error);
       alert('Error generating images: ' + errorMsg);
     } finally {
       setAiImageLoading(false);
@@ -1672,14 +1667,8 @@ const OrganismsPage = () => {
     return (
       <div className={`flex items-center justify-center min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <div className="text-center px-4">
-          <div className="mb-6 flex justify-center">
-            <img 
-              src="https://res.cloudinary.com/dhmgyv2ps/image/upload/v1764427279/346_xhjb6z.gif" 
-              alt="Loading" 
-              className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 object-contain"
-            />
-          </div>
-          <div className={`text-lg sm:text-2xl font-bold ${isDark ? 'text-green-400' : 'text-green-600'}`}>Loading organisms...</div>
+          <div className="text-6xl mb-6 animate-bounce">⏳</div>
+          <div className="text-lg sm:text-2xl font-bold text-gray-800">Loading organisms...</div>
         </div>
       </div>
     );
