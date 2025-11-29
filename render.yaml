@@ -17,7 +17,7 @@ services:
         value: biomuseum
       - key: CORS_ORIGINS
         scope: all
-        value: http://localhost:3000,http://localhost:3001,https://biomuseum.vercel.app
+        value: http://localhost:3000,http://localhost:3001,https://bio-museum.vercel.app,https://biomuseum.onrender.com
       - key: FRONTEND_URL
         scope: all
-        value: https://biomuseum.vercel.app
+        value: https://bio-museum.vercel.app
