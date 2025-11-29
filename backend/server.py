@@ -221,6 +221,11 @@ def verify_admin_token(credentials: HTTPAuthorizationCredentials = Depends(secur
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Root endpoint for health checks and load balancers
+@app.get("/")
+async def root_health():
+    return {"status": "ok", "service": "Biology Museum API", "version": "1.0.0"}
+
 # Routes
 @api_router.get("/")
 async def root():
