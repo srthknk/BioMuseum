@@ -255,10 +255,11 @@ const Homepage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <p className="text-gray-400 text-sm">
                 © Made with Love @ Chh.SambhajiNagar.
+                 <h5>Created by Sarthak N. Kulkarni B.Sc First Year</h5>
+                
               </p>
               <div className="text-right text-gray-400 text-sm">
-                <h5>Created by Sarthak N. Kulkarni B.Sc First Year</h5>
-                
+               
               </div>
             </div>
           </div>
