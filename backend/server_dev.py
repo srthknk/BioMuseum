@@ -84,6 +84,11 @@ def generate_qr_code(organism_id: str) -> str:
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Root endpoint for health checks and load balancers
+@app.get("/")
+async def root_health():
+    return {"status": "ok", "service": "Biology Museum API (DEV)", "version": "1.0.0"}
+
 # Routes
 @api_router.get("/")
 async def root():
