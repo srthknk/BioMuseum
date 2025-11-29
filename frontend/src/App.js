@@ -152,18 +152,18 @@ const Homepage = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Navbar - Smaller Version */}
-      <header className="bg-white shadow-md border-b-2 border-green-600 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-3">
+      <header className="bg-gradient-to-r from-green-600 to-green-700 shadow-lg border-b-4 border-green-800 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
           <div className="flex justify-between items-center">
             <div className="text-left">
-              <h1 className="text-2xl font-bold text-gray-800">BioMuseum</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-white">🌿 BioMuseum</h1>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <button
                 onClick={() => setShowAdminLogin(true)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2"
+                className="bg-white hover:bg-gray-100 text-green-700 px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg"
               >
-                <i className="fas fa-shield-alt"></i> Admin
+                <i className="fas fa-shield-alt"></i> <span className="hidden sm:inline">Admin</span>
               </button>
             </div>
           </div>
@@ -171,34 +171,30 @@ const Homepage = () => {
       </header>
 
       {/* Hero Section with Video Background */}
-      <div className="relative h-96 overflow-hidden">
+      <div className="relative min-h-screen md:h-screen overflow-hidden flex items-center justify-center">
         <video 
           autoPlay 
           muted 
           loop 
           className="absolute top-0 left-0 w-full h-full object-cover"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4))'
-          }}
+          playsInline
         >
-          <source src="file:///C:/Users/sarth/Downloads/Generated%20File%20November%2029,%202025%20-%206_34PM.mp4" type="video/mp4" />
+          <source src="https://res.cloudinary.com/dhmgyv2ps/video/upload/v1764422065/Generated_File_November_29_2025_-_6_34PM_gvi1ux.mp4" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
         
         {/* Overlay for text */}
-        <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center">
-          <div className="text-center text-white px-4">
-            <h2 className="text-5xl font-bold mb-4">BioMuseum: A Journey Through Living Wonders</h2>
-            <p className="text-xl mb-8 max-w-2xl mx-auto">
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col justify-center items-center">
+          <div className="text-center text-white px-4 sm:px-6 py-8">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 leading-tight drop-shadow-lg">BioMuseum: A Journey Through Living Wonders</h2>
+            <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed drop-shadow-md">
               Discover the wonders of life science through our interactive biology museum. Learn about diverse organisms and their fascinating characteristics.
             </p>
             <button
-              onClick={() => {
-                document.querySelector('[data-organisms-section]')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold text-lg transition-colors inline-flex items-center gap-2"
+              onClick={() => navigate('/organisms')}
+              className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base md:text-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
-              <i className="fas fa-arrow-right"></i> Explore
+              <i className="fas fa-arrow-right"></i> <span>Explore</span>
             </button>
           </div>
         </div>
@@ -206,143 +202,45 @@ const Homepage = () => {
 
       {/* Main Content */}
       <main className="flex-1">
-
-      {/* Organisms Section with Filters */}
-      <div className="max-w-7xl mx-auto px-4 py-12" data-organisms-section>
-        <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">Explore Organisms</h2>
-        
-        {/* Filter Section */}
-        <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Kingdom Filter */}
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">
-                <i className="fas fa-filter mr-2"></i>Filter by Kingdom
-              </label>
-              <select
-                onChange={(e) => {
-                  const filtered = e.target.value 
-                    ? organisms.filter(org => org.classification?.kingdom === e.target.value)
-                    : organisms;
-                  setOrganisms(filtered);
-                }}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
-              >
-                <option value="">All Kingdoms</option>
-                {[...new Set(organisms.map(org => org.classification?.kingdom).filter(Boolean))].map(kingdom => (
-                  <option key={kingdom} value={kingdom}>{kingdom}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Phylum Filter */}
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">
-                <i className="fas fa-filter mr-2"></i>Filter by Phylum
-              </label>
-              <select
-                onChange={(e) => {
-                  const filtered = e.target.value 
-                    ? organisms.filter(org => org.classification?.phylum === e.target.value)
-                    : organisms;
-                  setOrganisms(filtered);
-                }}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none"
-              >
-                <option value="">All Phyla</option>
-                {[...new Set(organisms.map(org => org.classification?.phylum).filter(Boolean))].map(phylum => (
-                  <option key={phylum} value={phylum}>{phylum}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Organisms Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {organisms.map((organism) => (
-            <div
-              key={organism.id}
-              onClick={() => navigate(`/organism/${organism.id}`)}
-              className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer border-2 hover:border-green-300 organism-card-enter hover:scale-105 transform duration-300"
-            >
-              <div className="flex items-center justify-center bg-gray-50 rounded-t-xl overflow-hidden h-48">
-                {organism.images && organism.images[0] ? (
-                  <img
-                    src={organism.images[0]}
-                    alt={organism.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-6xl">🦁</div>
-                )}
-              </div>
-              <div className="p-6 text-center">
-                <h3 className="text-xl font-bold text-gray-800 mb-2">{organism.name}</h3>
-                <p className="text-sm text-gray-600 italic mb-3">{organism.scientific_name}</p>
-                {organism.classification && (
-                  <div className="mt-3">
-                    <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                      {organism.classification.kingdom || 'Unknown Kingdom'}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {organisms.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-xl text-gray-600">No organisms found.</p>
-            <p className="text-gray-500 mt-2">Try a different search term or browse all specimens.</p>
-          </div>
-        )}
-      </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <footer className="bg-gradient-to-b from-gray-900 to-gray-950 text-white mt-12 border-t-4 border-green-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
             {/* About Section */}
-            <div>
-              <h3 className="text-2xl font-bold mb-4">BioMuseum</h3>
-              <p className="text-gray-300 text-sm">
+            <div className="text-center sm:text-left">
+              <h3 className="text-lg sm:text-2xl font-bold mb-3 sm:mb-4 text-green-400">🌿 BioMuseum</h3>
+              <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
                 Discover the wonders of life science through our interactive biology museum. 
                 Learn about diverse organisms and their fascinating characteristics.
               </p>
             </div>
 
             {/* Quick Links */}
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                <li><a href="/" className="hover:text-green-400 transition-colors"><i className="fas fa-home mr-2"></i>Home</a></li>
-               <li><a onClick={() => setShowAdminLogin(true)} className="hover:text-green-400 transition-colors cursor-pointer"><i className="fas fa-shield-alt mr-2"></i>Admin Panel</a></li>
+            <div className="text-center sm:text-left">
+              <h4 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-green-400">Quick Links</h4>
+              <ul className="space-y-2 text-gray-300 text-xs sm:text-sm">
+                <li><a href="/" className="hover:text-green-400 transition-colors duration-200 flex items-center justify-center sm:justify-start gap-2"><i className="fas fa-home"></i><span>Home</span></a></li>
+               <li><a onClick={() => setShowAdminLogin(true)} className="hover:text-green-400 transition-colors duration-200 cursor-pointer flex items-center justify-center sm:justify-start gap-2"><i className="fas fa-shield-alt"></i><span>Admin Panel</span></a></li>
               </ul>
             </div>
 
             {/* Contact Info */}
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Contact & Social</h4>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                <li><i className="fas fa-envelope mr-2"></i>Email: sarthaknk07@outlook.com</li>
-                <li><i className="fas fa-map-marker-alt mr-2"></i>Location : Zoology Department, SBES College of Science</li>
+            <div className="text-center sm:text-left">
+              <h4 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-green-400">Contact</h4>
+              <ul className="space-y-2 text-gray-300 text-xs sm:text-sm">
+                <li><a href="mailto:sarthaknk07@outlook.com" className="hover:text-green-400 transition-colors duration-200 flex items-center justify-center sm:justify-start gap-2"><i className="fas fa-envelope"></i><span>sarthaknk07@outlook.com</span></a></li>
+                <li className="flex items-center justify-center sm:justify-start gap-2"><i className="fas fa-map-marker-alt"></i><span>Zoology Dept, SBES</span></li>
               </ul>
             </div>
           </div>
 
           {/* Divider */}
-          <div className="border-t border-gray-700 mt-8 pt-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <p className="text-gray-400 text-sm">
-                © Made with Love @ Chh.SambhajiNagar.
-                 <h5 className="mt-2">Created by Sarthak N. Kulkarni B.Sc First Year</h5>
-              </p>
-              <div className="text-right text-gray-400 text-sm">
-               
-              </div>
+          <div className="border-t border-gray-700 mt-8 sm:mt-10 pt-6 sm:pt-8">
+            <div className="text-center text-gray-400 text-xs sm:text-sm">
+              <p className="mb-2">© Made with 💚 @ Chh. Sambhaji Nagar</p>
+              <p>Created by Sarthak N. Kulkarni B.Sc First Year</p>
             </div>
           </div>
         </div>
@@ -350,45 +248,50 @@ const Homepage = () => {
 
       {/* Admin Login Modal */}
       {showAdminLogin && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
-            <h2 className="text-2xl font-bold mb-6 text-center">Admin Login</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 sm:p-0">
+          <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-auto border-t-4 border-green-600">
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="text-4xl mb-2">🔐</div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Admin Login</h2>
+            </div>
             <form onSubmit={handleAdminLogin}>
-              <div className="mb-4">
+              <div className="mb-4 sm:mb-5">
                 <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Username
+                  <i className="fas fa-user mr-2 text-green-600"></i>Username
                 </label>
                 <input
                   type="text"
                   name="username"
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:outline-none transition-all text-sm sm:text-base"
+                  placeholder="Enter username"
                   required
                 />
               </div>
-              <div className="mb-6">
+              <div className="mb-6 sm:mb-8">
                 <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Password
+                  <i className="fas fa-lock mr-2 text-green-600"></i>Password
                 </label>
                 <input
                   type="password"
                   name="password"
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:outline-none transition-all text-sm sm:text-base"
+                  placeholder="Enter password"
                   required
                 />
               </div>
-              <div className="flex gap-4">
+              <div className="flex gap-3 sm:gap-4">
                 <button
                   type="button"
                   onClick={() => setShowAdminLogin(false)}
-                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 rounded-lg transition-colors"
+                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2.5 rounded-lg font-semibold transition-all duration-200 text-sm sm:text-base"
                 >
-                  Cancel
+                  <i className="fas fa-times mr-1"></i>Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
+                  className="flex-1 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white py-2.5 rounded-lg font-semibold transition-all duration-200 text-sm sm:text-base shadow-md hover:shadow-lg"
                 >
-                  Login
+                  <i className="fas fa-sign-in-alt mr-1"></i>Login
                 </button>
               </div>
             </form>
@@ -1462,6 +1365,207 @@ const EditOrganismForm = ({ organism, token, onSuccess, onCancel }) => {
   );
 };
 
+// Organisms Page Component
+const OrganismsPage = () => {
+  const [organisms, setOrganisms] = useState([]);
+  const [allOrganisms, setAllOrganisms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedKingdom, setSelectedKingdom] = useState('');
+  const [selectedPhylum, setSelectedPhylum] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchOrganisms();
+  }, []);
+
+  const fetchOrganisms = async () => {
+    try {
+      const response = await axios.get(`${API}/organisms`);
+      setAllOrganisms(response.data);
+      setOrganisms(response.data);
+    } catch (error) {
+      console.error('Error fetching organisms:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKingdomChange = (e) => {
+    const kingdom = e.target.value;
+    setSelectedKingdom(kingdom);
+    filterOrganisms(kingdom, selectedPhylum);
+  };
+
+  const handlePhylumChange = (e) => {
+    const phylum = e.target.value;
+    setSelectedPhylum(phylum);
+    filterOrganisms(selectedKingdom, phylum);
+  };
+
+  const filterOrganisms = (kingdom, phylum) => {
+    let filtered = allOrganisms;
+    
+    if (kingdom) {
+      filtered = filtered.filter(org => org.classification?.kingdom === kingdom);
+    }
+    
+    if (phylum) {
+      filtered = filtered.filter(org => org.classification?.phylum === phylum);
+    }
+    
+    setOrganisms(filtered);
+  };
+
+  const getUniqueKingdoms = () => {
+    return [...new Set(allOrganisms.map(org => org.classification?.kingdom).filter(Boolean))];
+  };
+
+  const getUniquePhyla = () => {
+    return [...new Set(allOrganisms.map(org => org.classification?.phylum).filter(Boolean))];
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center px-4">
+          <div className="text-4xl mb-4">🧬</div>
+          <div className="text-lg sm:text-2xl font-bold text-green-600">Loading organisms...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Navbar */}
+      <header className="bg-gradient-to-r from-green-600 to-green-700 shadow-lg border-b-4 border-green-800 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex justify-between items-center">
+          <h1 className="text-lg sm:text-2xl font-bold text-white">🌿 BioMuseum</h1>
+          <button onClick={() => window.location.href = '/'} className="bg-white hover:bg-gray-100 text-green-700 px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md">
+            <i className="fas fa-arrow-left"></i><span className="hidden sm:inline">Back Home</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl mx-auto w-full py-6 sm:py-8 px-3 sm:px-4">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-8 text-center text-gray-800">
+          <i className="fas fa-binoculars mr-2 text-green-600"></i>Explore Organisms
+        </h2>
+
+        {/* Filter Section */}
+        <div className="mb-6 sm:mb-8 bg-white p-4 sm:p-6 rounded-xl shadow-md border-l-4 border-green-600">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
+            {/* Kingdom Filter */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2 text-sm sm:text-base">
+                <i className="fas fa-filter mr-2 text-green-600"></i>Filter by Kingdom
+              </label>
+              <select
+                value={selectedKingdom}
+                onChange={handleKingdomChange}
+                className="w-full px-3 sm:px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:outline-none transition-all text-sm sm:text-base"
+              >
+                <option value="">All Kingdoms</option>
+                {getUniqueKingdoms().map(kingdom => (
+                  <option key={kingdom} value={kingdom}>{kingdom}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Phylum Filter */}
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2 text-sm sm:text-base">
+                <i className="fas fa-filter mr-2 text-green-600"></i>Filter by Phylum
+              </label>
+              <select
+                value={selectedPhylum}
+                onChange={handlePhylumChange}
+                className="w-full px-3 sm:px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:outline-none transition-all text-sm sm:text-base"
+              >
+                <option value="">All Phyla</option>
+                {getUniquePhyla().map(phylum => (
+                  <option key={phylum} value={phylum}>{phylum}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-500 mt-3">Showing {organisms.length} organism{organisms.length !== 1 ? 's' : ''}</p>
+        </div>
+
+        {/* Organisms Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          {organisms.map((organism) => (
+            <div
+              key={organism.id}
+              onClick={() => navigate(`/organism/${organism.id}`)}
+              className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all cursor-pointer border border-gray-200 hover:border-green-300 hover:scale-105 transform duration-300 overflow-hidden"
+            >
+              <div className="flex items-center justify-center bg-gray-100 overflow-hidden h-40 sm:h-48 relative">
+                {organism.images && organism.images[0] ? (
+                  <img
+                    src={organism.images[0]}
+                    alt={organism.name}
+                    className="w-full h-full object-cover hover:brightness-110 transition-all"
+                  />
+                ) : (
+                  <div className="text-3xl sm:text-4xl"><i className="fas fa-leaf text-green-600"></i></div>
+                )}
+              </div>
+              <div className="p-3 sm:p-4 text-center">
+                <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-1 line-clamp-2">{organism.name}</h3>
+                <p className="text-xs sm:text-sm text-gray-600 italic mb-2 sm:mb-3 line-clamp-1">{organism.scientific_name}</p>
+                {organism.classification && (
+                  <div className="mt-2 sm:mt-3">
+                    <span className="inline-block bg-green-100 text-green-800 text-xs px-2 sm:px-3 py-1 rounded-full font-medium">
+                      {organism.classification.kingdom || 'Unknown'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {organisms.length === 0 && (
+          <div className="text-center py-12 sm:py-16">
+            <div className="text-4xl mb-4">🔍</div>
+            <p className="text-base sm:text-lg text-gray-600 font-semibold">No organisms found</p>
+            <p className="text-sm sm:text-base text-gray-500 mt-2">Try adjusting your search filters.</p>
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-gradient-to-b from-gray-900 to-gray-950 text-white mt-10 sm:mt-12 border-t-4 border-green-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
+            <div className="text-center sm:text-left">
+              <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3 text-green-400">🌿 BioMuseum</h3>
+              <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
+                Discover the wonders of life science through our interactive biology museum.
+              </p>
+            </div>
+            <div className="text-center sm:text-left">
+              <h4 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-green-400">Links</h4>
+              <ul className="space-y-1 sm:space-y-2 text-gray-300 text-xs sm:text-sm">
+                <li><a href="/" className="hover:text-green-400 transition-colors flex items-center justify-center sm:justify-start gap-2"><i className="fas fa-home"></i><span>Home</span></a></li>
+              </ul>
+            </div>
+            <div className="text-center sm:text-left">
+              <h4 className="text-sm sm:text-base font-semibold mb-2 sm:mb-3 text-green-400">Contact</h4>
+              <p className="text-gray-300 text-xs sm:text-sm"><i className="fas fa-envelope mr-2"></i><a href="mailto:sarthaknk07@outlook.com" className="hover:text-green-400">sarthaknk07@outlook.com</a></p>
+            </div>
+          </div>
+          <div className="border-t border-gray-700 mt-6 sm:mt-8 pt-4 sm:pt-6 text-center text-gray-400 text-xs sm:text-sm">
+            <p>© Made with 💚 @ Chh. Sambhaji Nagar</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
 function App() {
   return (
     <AdminProvider>
@@ -1469,6 +1573,7 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Homepage />} />
+            <Route path="/organisms" element={<OrganismsPage />} />
             <Route path="/scanner" element={<QRScanner />} />
             <Route path="/organism/:id" element={<OrganismDetail />} />
             <Route path="/admin" element={<AdminPanel />} />
