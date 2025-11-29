@@ -19,6 +19,7 @@ code {
 .line-clamp-3 {
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -404,4 +405,53 @@ button:active {
     .no-print {
         display: none !important;
     }
+}
+
+/* Google Sign-In Button Styling */
+.google-signin-button {
+    width: 100% !important;
+}
+
+.google-signin-button > div > div {
+    width: 100% !important;
+}
+
+.google-signin-button button {
+    width: 100% !important;
+    padding: 12px 16px !important;
+    height: auto !important;
+    min-height: 48px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    background: white !important;
+    border: 2px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    transition: all 0.3s ease !important;
+}
+
+.google-signin-button button:hover {
+    border-color: #d1d5db !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Dark mode support */
+.dark .google-signin-button button {
+    background: #1f2937 !important;
+    border-color: #374151 !important;
+    color: white !important;
+}
+
+.dark .google-signin-button button:hover {
+    border-color: #4b5563 !important;
+}
+
+/* Google button text styling - make it bold and modern */
+.google-signin-button button span {
+    font-weight: 700 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+    font-size: 16px !important;
+    letter-spacing: 0.3px !important;
+    white-space: nowrap !important;
 }
