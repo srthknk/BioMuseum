@@ -4,7 +4,27 @@ import axios from "axios";
 import { QrReader } from 'react-qr-reader';
 import "./App.css";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+// Determine backend URL based on current location
+const BACKEND_URL = (() => {
+  // If env var is set, use it
+  if (process.env.REACT_APP_BACKEND_URL) {
+    return process.env.REACT_APP_BACKEND_URL;
+  }
+  
+  // On deployed Vercel (bio-museum.vercel.app), use Render backend
+  if (window.location.hostname.includes('vercel.app')) {
+    return 'https://biomuseum.onrender.com';
+  }
+  
+  // On localhost, use local backend
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:8000';
+  }
+  
+  // Fallback to localhost
+  return 'http://localhost:8000';
+})();
+
 const API = `${BACKEND_URL}/api`;
 
 // Configure axios with longer timeout
