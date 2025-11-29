@@ -64,7 +64,6 @@ async def init_mongodb():
                 'tlsAllowInvalidCertificates': False,
                 'tlsAllowInvalidHostnames': False,
                 'appName': 'biomuseum',
-                'family': socket.AF_INET,  # Force IPv4
             }
             
             print(f"[INFO] MongoDB URL: {MONGO_URL[:50]}...")
