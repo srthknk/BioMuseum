@@ -510,6 +510,101 @@ async def admin_login(login: AdminLogin):
         return AdminToken(access_token=token)
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
+@api_router.post("/admin/verify-email")
+async def verify_admin_email(request: dict):
+    """Verify if an email is in the authorized admin whitelist."""
+    try:
+        email = request.get("email", "").strip().lower()
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+        
+        # Get authorized emails from environment
+        authorized_emails_str = os.environ.get('AUTHORIZED_ADMIN_EMAILS', '')
+        if not authorized_emails_str:
+            raise HTTPException(status_code=503, detail="Admin email whitelist not configured")
+        
+        # Parse authorized emails (comma-separated)
+        authorized_emails = [e.strip().lower() for e in authorized_emails_str.split(',')]
+        
+        # Check if email is authorized
+        if email in authorized_emails:
+            # Generate admin token for this email
+            token = hashlib.sha256(f"admin:{email}".encode()).hexdigest()
+            return {
+                "success": True,
+                "email": email,
+                "access_token": token,
+                "message": f"Successfully logged in as {email}"
+            }
+        else:
+            raise HTTPException(status_code=403, detail="Email not authorized. Access denied.")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Email verification error: {e}")
+        raise HTTPException(status_code=500, detail="Email verification failed")
+
+@api_router.post("/admin/google-login")
+async def google_login(request: dict):
+    """Verify Google OAuth token and check if email is authorized."""
+    try:
+        google_token = request.get("token", "").strip()
+        
+        if not google_token:
+            raise HTTPException(status_code=400, detail="Google token is required")
+        
+        # Verify Google token using google-auth library
+        try:
+            from google.auth.transport import requests
+            from google.oauth2 import id_token
+            
+            # Get Google Client ID from environment
+            google_client_id = os.environ.get('GOOGLE_CLIENT_ID')
+            if not google_client_id:
+                raise HTTPException(status_code=503, detail="Google OAuth not configured")
+            
+            # Verify the token
+            idinfo = id_token.verify_oauth2_token(google_token, requests.Request(), google_client_id)
+            
+            # Extract email from token
+            email = idinfo.get('email', '').strip().lower()
+            if not email:
+                raise HTTPException(status_code=400, detail="No email in Google token")
+            
+            # Verify email is authorized
+            authorized_emails_str = os.environ.get('AUTHORIZED_ADMIN_EMAILS', '')
+            if not authorized_emails_str:
+                raise HTTPException(status_code=503, detail="Admin email whitelist not configured")
+            
+            authorized_emails = [e.strip().lower() for e in authorized_emails_str.split(',')]
+            
+            if email not in authorized_emails:
+                raise HTTPException(status_code=403, detail=f"Email {email} is not authorized. Access denied.")
+            
+            # Generate admin token for this email
+            token = hashlib.sha256(f"admin:{email}".encode()).hexdigest()
+            
+            return {
+                "success": True,
+                "email": email,
+                "name": idinfo.get('name', ''),
+                "picture": idinfo.get('picture', ''),
+                "access_token": token,
+                "message": f"Successfully logged in with Google as {email}"
+            }
+            
+        except ValueError as e:
+            logging.error(f"Invalid Google token: {e}")
+            raise HTTPException(status_code=401, detail="Invalid Google token")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Google login error: {e}")
+        raise HTTPException(status_code=500, detail=f"Google login failed: {str(e)}")
+
 @api_router.post("/admin/organisms", response_model=Organism)
 async def create_organism(organism: OrganismCreate, _: bool = Depends(verify_admin_token)):
     try:

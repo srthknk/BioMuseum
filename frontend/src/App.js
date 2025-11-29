@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { QrReader } from 'react-qr-reader';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import "./App.css";
 
 // Determine backend URL based on current location
@@ -138,6 +139,46 @@ const Homepage = () => {
       navigate('/admin');
     } catch (error) {
       alert('Invalid credentials');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleEmailLogin = async () => {
+    const email = prompt('Enter your authorized email:');
+    if (!email) return;
+
+    setLoginLoading(true);
+    try {
+      const response = await axios.post(`${API}/admin/verify-email`, { email });
+      if (response.data.success) {
+        login(response.data.access_token);
+        setShowAdminLogin(false);
+        navigate('/admin');
+        alert(`✅ Welcome ${response.data.email}!`);
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || 'Email verification failed';
+      alert(`❌ ${errorMsg}`);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (credentialResponse) => {
+    setLoginLoading(true);
+    try {
+      const token = credentialResponse.credential;
+      const response = await axios.post(`${API}/admin/google-login`, { token });
+      if (response.data.success) {
+        login(response.data.access_token);
+        setShowAdminLogin(false);
+        navigate('/admin');
+        alert(`✅ Welcome ${response.data.name || response.data.email}!`);
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || 'Google login failed';
+      alert(`❌ ${errorMsg}`);
     } finally {
       setLoginLoading(false);
     }
@@ -310,10 +351,33 @@ const Homepage = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white py-2.5 rounded-lg font-semibold transition-all duration-200 text-sm sm:text-base shadow-md hover:shadow-lg"
+                  disabled={loginLoading}
+                  className="flex-1 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white py-2.5 rounded-lg font-semibold transition-all duration-200 text-sm sm:text-base shadow-md hover:shadow-lg disabled:opacity-50"
                 >
-                  <i className="fas fa-sign-in-alt mr-1"></i>Login
+                  {loginLoading ? 'Logging in...' : <><i className="fas fa-sign-in-alt mr-1"></i>Login</>}
                 </button>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-300 dark:border-gray-600">
+                <div className="flex items-center justify-center">
+                  <GoogleOAuthProvider clientId="834932134878-mu46t9129ovalq4pcqofre2mgbu37aj1.apps.googleusercontent.com">
+                    <div className="w-full google-signin-button">
+                      <GoogleLogin 
+                        onSuccess={handleGoogleLogin} 
+                        onError={(error) => {
+                          console.error('Google login error:', error);
+                          alert(`Google login failed: ${error?.error || 'Unknown error'}`);
+                        }}
+                        theme={isDark ? 'dark' : 'light'}
+                        size="large"
+                        width="100%"
+                        text="signin_with"
+                      />
+                    </div>
+                  </GoogleOAuthProvider>
+                </div>
+                <p className={`text-center text-xs mt-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Only authorized emails can access admin panel
+                </p>
               </div>
             </form>
           </div>
