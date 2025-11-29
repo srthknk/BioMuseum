@@ -234,10 +234,30 @@ def generate_qr_code(organism_id: str) -> str:
 security = HTTPBearer()
 
 def verify_admin_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    expected_token = hashlib.sha256("admin:adminSBES".encode()).hexdigest()
-    if credentials.credentials != expected_token:
-        raise HTTPException(status_code=401, detail="Invalid admin token")
-    return True
+    """
+    Verify admin token from either username/password or Google OAuth login.
+    Accepts tokens from:
+    1. Username/password: admin:adminSBES
+    2. Google OAuth: admin:{authorized_email}
+    """
+    received_token = credentials.credentials
+    
+    # Check for username/password token
+    expected_token_admin = hashlib.sha256("admin:adminSBES".encode()).hexdigest()
+    if received_token == expected_token_admin:
+        return True
+    
+    # Check for Google OAuth tokens from authorized emails
+    authorized_emails_str = os.environ.get('AUTHORIZED_ADMIN_EMAILS', '')
+    if authorized_emails_str:
+        authorized_emails = [e.strip().lower() for e in authorized_emails_str.split(',')]
+        for email in authorized_emails:
+            expected_token_email = hashlib.sha256(f"admin:{email}".encode()).hexdigest()
+            if received_token == expected_token_email:
+                return True
+    
+    # If no token matches, raise error
+    raise HTTPException(status_code=401, detail="Invalid admin token")
 
 # Create app and router
 app = FastAPI()
