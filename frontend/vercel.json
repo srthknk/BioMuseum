@@ -2,7 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "build",
   "env": {
-    "REACT_APP_BACKEND_URL": "https://biomuseum-backend.onrender.com"
+    "REACT_APP_BACKEND_URL": "https://biomuseum.onrender.com"
   },
   "headers": [
     {
