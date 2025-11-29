@@ -1312,7 +1312,7 @@ const AddOrganismForm = ({ token, isDark, onSuccess }) => {
   );
 };
 
-// Print Organism Modal Component
+// Print Organism Modal Component - Enhanced UI with QR Code and Print Preview
 const PrintOrganismModal = ({ organism, isDark, onClose }) => {
   const printRef = React.useRef();
 
