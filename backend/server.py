@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import sys
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -19,6 +20,11 @@ import ssl
 import asyncio
 import socket
 import dns.resolver
+import google.generativeai as genai
+
+# Ensure UTF-8 output on Windows
+if sys.platform == 'win32':
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -27,6 +33,14 @@ load_dotenv(ROOT_DIR / '.env')
 MONGO_URL = os.environ.get('MONGO_URL')
 if not MONGO_URL:
     raise ValueError("ERROR: MONGO_URL environment variable is not set. MongoDB is required.")
+
+# Google Gemini API Setup
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    print("[OK] Google Gemini API configured successfully")
+else:
+    print("[WARN] GEMINI_API_KEY not set - AI organism feature will not work")
 
 db = None
 organisms_collection = None
@@ -280,6 +294,94 @@ async def search_organisms(q: str):
     except Exception as e:
         logging.error(f"Error searching organisms: {e}")
         return []
+
+# Pydantic model for AI organism generation request
+class OrganismNameRequest(BaseModel):
+    organism_name: str = Field(..., description="Common name of the organism")
+
+# AI Endpoint - Generate organism data using Gemini
+@api_router.post("/admin/organisms/ai-complete")
+async def generate_organism_data_ai(request: OrganismNameRequest):
+    """
+    Generate organism data using Google Gemini AI.
+    Admin only needs to provide the organism name.
+    """
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=503, detail="AI feature is not configured. GEMINI_API_KEY is missing.")
+    
+    try:
+        organism_name = request.organism_name.strip()
+        if not organism_name:
+            raise HTTPException(status_code=400, detail="Organism name cannot be empty")
+        
+        # Create prompt for Gemini
+        prompt = f"""You are an expert biologist and zoologist. I need you to provide detailed biological information about "{organism_name}".
+
+Please provide the information in JSON format ONLY (no markdown, no explanations). Return ONLY valid JSON:
+
+{{
+    "name": "Common name of the organism",
+    "scientific_name": "Scientific name (binomial nomenclature)",
+    "classification": {{
+        "kingdom": "Kingdom",
+        "phylum": "Phylum",
+        "class": "Class",
+        "order": "Order",
+        "family": "Family",
+        "genus": "Genus",
+        "species": "Species"
+    }},
+    "morphology": "Physical description including size, color, distinctive features (2-3 sentences)",
+    "physiology": "How the organism functions, internal systems, key biological processes (2-3 sentences)",
+    "general_description": "General overview of the organism, its habitat, and interesting facts (2-3 sentences)",
+    "habitat": "Where it lives and environmental preferences",
+    "behavior": "Behavioral characteristics if applicable",
+    "diet": "What it eats (if applicable)",
+    "conservation_status": "Conservation status (e.g., Least Concern, Endangered, etc.)"
+}}
+
+Be accurate and scientific. If you cannot find specific information, make reasonable educated guesses based on the organism's taxonomy.
+Make sure the JSON is valid and properly formatted."""
+
+        # Call Gemini API
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
+        
+        # Parse the response
+        response_text = response.text.strip()
+        
+        # Remove markdown code blocks if present
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.startswith('```'):
+            response_text = response_text[3:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+        
+        response_text = response_text.strip()
+        
+        # Parse JSON
+        organism_data = json.loads(response_text)
+        
+        # Validate required fields
+        required_fields = ['name', 'scientific_name', 'classification', 'morphology', 'physiology', 'general_description']
+        for field in required_fields:
+            if field not in organism_data:
+                organism_data[field] = ""
+        
+        # Return the generated data
+        return {
+            "success": True,
+            "data": organism_data,
+            "source": "ai_generated"
+        }
+        
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON parsing error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse AI response: {str(e)}")
+    except Exception as e:
+        logging.error(f"Error generating organism data with AI: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating organism data: {str(e)}")
 
 @api_router.post("/admin/login", response_model=AdminToken)
 async def admin_login(login: AdminLogin):
