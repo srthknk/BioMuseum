@@ -60,7 +60,7 @@ def test_invalid_admin_credentials():
     
     invalid_logins = [
         {"username": "admin", "password": "wrong"},
-        {"username": "wrong", "password": "admin SBES"},
+        {"username": "wrong", "password": "adminSBES"},
         {"username": "", "password": ""},
     ]
     
@@ -78,7 +78,7 @@ def test_malformed_organism_creation():
     # Get admin token first
     login_response = requests.post(f"{BACKEND_URL}/admin/login", json={
         "username": "admin", 
-        "password": "admin SBES"
+        "password": "adminSBES"
     })
     
     if login_response.status_code != 200:
