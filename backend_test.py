@@ -14,7 +14,7 @@ import sys
 # Configuration
 BACKEND_URL = "https://biomuseum-scan.preview.emergentagent.com/api"
 ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin SBES"
+ADMIN_PASSWORD = "adminSBES"
 
 class MuseumAPITester:
     def __init__(self):
