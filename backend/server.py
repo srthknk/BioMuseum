@@ -331,10 +331,16 @@ async def delete_organism(organism_id: str, _: bool = Depends(verify_admin_token
 
 app.include_router(api_router)
 
+# Parse CORS origins from environment variable
+cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001').split(',')
+cors_origins = [origin.strip() for origin in cors_origins]  # Remove whitespace
+
+print(f"[INFO] CORS Origins configured: {cors_origins}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # allow all origins
-    allow_credentials=False,  # must be FALSE when using "*"
+    allow_origins=cors_origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
