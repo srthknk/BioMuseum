@@ -315,7 +315,9 @@ async def generate_organism_data_ai(request: OrganismNameRequest):
     Admin only needs to provide the organism name.
     """
     if not GEMINI_API_KEY:
-        raise HTTPException(status_code=503, detail="AI feature is not configured. GEMINI_API_KEY is missing.")
+        error_msg = "AI feature is not configured. GEMINI_API_KEY is missing. Please set the GEMINI_API_KEY environment variable in your .env file or on Render dashboard."
+        logging.error(error_msg)
+        raise HTTPException(status_code=503, detail=error_msg)
     
     try:
         organism_name = request.organism_name.strip()
