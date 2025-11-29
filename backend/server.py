@@ -16,6 +16,7 @@ import io
 import base64
 import hashlib
 import json
+import requests
 import ssl
 import asyncio
 import socket
@@ -390,60 +391,115 @@ Make sure the JSON is valid and properly formatted."""
         logging.error(f"Error generating organism data with AI: {e}")
         raise HTTPException(status_code=500, detail=f"Error generating organism data: {str(e)}")
 
+
+def get_search_terms_from_gemini(organism_name: str):
+    """Use Gemini to generate better search terms for organism images."""
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=GOOGLE_API_KEY)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        prompt = f'Given the organism name "{organism_name}", generate 3-5 search keywords that would find relevant images on Unsplash. Each keyword should be a single word or short phrase. Return ONLY the keywords as comma-separated list. Example: "cobra, snake, reptile"'
+        response = model.generate_content(prompt)
+        search_terms = [term.strip() for term in response.text.split(',')]
+        return search_terms
+    except Exception as e:
+        return [organism_name.lower()]
+
+def search_unsplash_images(organism_name: str, count: int = 6):
+    """Search Unsplash API for organism images using AI-enhanced search terms."""
+    UNSPLASH_ACCESS_KEY = "vQ_yvjIskYKmvpXywThJ4u5kBjRzTAk1kDZkwYhwDbY"
+    UNSPLASH_API_URL = "https://api.unsplash.com"
+    images = []
+    search_terms = get_search_terms_from_gemini(organism_name)
+    search_terms.insert(0, organism_name)
+    
+    for query in search_terms:
+        if len(images) >= count:
+            break
+        try:
+            response = requests.get(
+                f"{UNSPLASH_API_URL}/search/photos",
+                params={
+                    'query': query,
+                    'client_id': UNSPLASH_ACCESS_KEY,
+                    'per_page': 10,
+                    'orientation': 'landscape'
+                },
+                timeout=10
+            )
+            if response.status_code == 200:
+                data = response.json()
+                for result in data.get('results', []):
+                    if len(images) >= count:
+                        break
+                    img_url = result.get('urls', {}).get('regular', '')
+                    if img_url and img_url not in images:
+                        if '?' in img_url:
+                            img_url += '&w=800&q=90'
+                        else:
+                            img_url += '?w=800&q=90'
+                        images.append(img_url)
+        except Exception as e:
+            continue
+    
+    if not images:
+        try:
+            response = requests.get(
+                f"{UNSPLASH_API_URL}/search/photos",
+                params={
+                    'query': organism_name,
+                    'client_id': UNSPLASH_ACCESS_KEY,
+                    'per_page': 6
+                },
+                timeout=10
+            )
+            if response.status_code == 200:
+                data = response.json()
+                for result in data.get('results', [])[:6]:
+                    img_url = result.get('urls', {}).get('regular', '')
+                    if img_url:
+                        if '?' in img_url:
+                            img_url += '&w=800&q=90'
+                        else:
+                            img_url += '?w=800&q=90'
+                        images.append(img_url)
+        except Exception as e:
+            pass
+    
+    return images[:count]
+
+
 @api_router.post("/admin/organisms/ai-generate-images")
 async def generate_organism_images_ai(request: dict):
-    """
-    Generate HD images for an organism using Unsplash API or similar.
-    Since we don't have access to image generation APIs directly,
-    we'll provide high-quality image URLs from open sources.
-    """
+    """Generate organism images using Unsplash API with AI-enhanced search."""
     try:
-        organism_name = request.get('organism_name', '').strip()
-        count = request.get('count', 4)
+        organism_name = request.get("organism_name", "").strip()
         
         if not organism_name:
-            raise HTTPException(status_code=400, detail="Organism name cannot be empty")
+            raise ValueError("organism_name is required")
         
-        if count > 10:
-            count = 10  # Limit to 10 images
+        image_urls = search_unsplash_images(organism_name, count=6)
         
-        # For now, we'll return placeholder images from Unsplash API
-        # In production, you would integrate with actual image generation or stock photo APIs
-        import urllib.parse
-        
-        # Create URLs for high-quality images from Unsplash
-        images = []
-        query = urllib.parse.quote(organism_name)
-        
-        # Generate URLs for different image variations
-        image_urls = [
-            f"https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80&auto=format&crop=entropy&cs=tinysrgb",  # Nature
-            f"https://images.unsplash.com/photo-1489330911046-c894fdcc538d?w=800&q=80&auto=format&crop=entropy&cs=tinysrgb",  # Wildlife
-            f"https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=800&q=80&auto=format&crop=entropy&cs=tinysrgb",  # Nature
-            f"https://images.unsplash.com/photo-1518531933037-91b2f0f0767a?w=800&q=80&auto=format&crop=entropy&cs=tinysrgb",  # Animals
-            f"https://images.unsplash.com/photo-1511218e0f31-ad25f1d80a4e?w=800&q=80&auto=format&crop=entropy&cs=tinysrgb",  # Nature close-up
-            f"https://images.unsplash.com/photo-1446768500-6b1b4ec3f1c3?w=800&q=80&auto=format&crop=entropy&cs=tinysrgb",  # Wildlife
-        ]
-        
-        # Return requested number of images
-        for i in range(min(count, len(image_urls))):
-            images.append(image_urls[i])
-        
-        # If we need more, repeat some
-        while len(images) < count:
-            images.append(image_urls[len(images) % len(image_urls)])
+        if not image_urls:
+            image_urls = [
+                "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=90",
+                "https://images.unsplash.com/photo-1489330911046-c894fdcc538d?w=800&q=90"
+            ]
         
         return {
             "success": True,
-            "images": images[:count],
             "organism_name": organism_name,
-            "count": len(images[:count]),
-            "source": "unsplash_hd"
+            "image_urls": image_urls[:6],
+            "source": "unsplash",
+            "message": f"Generated {len(image_urls)} images for {organism_name}"
         }
-        
     except Exception as e:
-        logging.error(f"Error generating organism images: {e}")
-        raise HTTPException(status_code=500, detail=f"Error generating images: {str(e)}")
+        print(f"[ERROR] AI image generation failed: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Failed to generate images"
+        }
 
 @api_router.post("/admin/login", response_model=AdminToken)
 async def admin_login(login: AdminLogin):
