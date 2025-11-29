@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from "
 import axios from "axios";
 import { QrReader } from 'react-qr-reader';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { QRCodeSVG } from 'qrcode.react';
 import "./App.css";
 
 // Determine backend URL based on current location
@@ -1311,9 +1312,193 @@ const AddOrganismForm = ({ token, isDark, onSuccess }) => {
   );
 };
 
+// Print Organism Modal Component
+const PrintOrganismModal = ({ organism, isDark, onClose }) => {
+  const printRef = React.useRef();
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '', 'height=500,width=500');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Print ${organism.name}</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              padding: 15px;
+              background-color: #f5f5f5;
+            }
+            .print-container {
+              background-color: white;
+              padding: 30px 25px;
+              border-radius: 8px;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+              text-align: center;
+              max-width: 350px;
+              width: 100%;
+            }
+            h1 {
+              margin: 0 0 8px 0;
+              font-size: 24px;
+              color: #1a1a1a;
+              word-wrap: break-word;
+            }
+            .scientific-name {
+              font-style: italic;
+              color: #555;
+              margin-bottom: 25px;
+              font-size: 14px;
+              word-wrap: break-word;
+            }
+            .qr-code {
+              margin: 25px 0;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+            }
+            .qr-code canvas {
+              border: 2px solid #ddd;
+              padding: 8px;
+              max-width: 100%;
+              height: auto;
+            }
+            .footer {
+              margin-top: 20px;
+              font-size: 11px;
+              color: #888;
+              border-top: 1px solid #eee;
+              padding-top: 12px;
+            }
+            .footer p {
+              margin: 3px 0;
+            }
+            @media print {
+              body {
+                background-color: white;
+                padding: 0;
+              }
+              .print-container {
+                box-shadow: none;
+                padding: 20px 15px;
+                max-width: 100%;
+              }
+              h1 {
+                font-size: 20px;
+              }
+            }
+            @media (max-width: 480px) {
+              .print-container {
+                padding: 20px 15px;
+              }
+              h1 {
+                font-size: 20px;
+              }
+              .scientific-name {
+                font-size: 13px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            <h1>${organism.name}</h1>
+            <div class="scientific-name">${organism.scientific_name}</div>
+            <div class="qr-code" id="qr-placeholder"></div>
+            <div class="footer">
+              <p>BioMuseum Collection</p>
+              <p>${new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
+          <script>
+            new QRCode(document.getElementById("qr-placeholder"), {
+              text: "${window.location.origin}${window.location.pathname}?organism=${organism.id}",
+              width: 180,
+              height: 180,
+              colorDark: "#000000",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.H
+            });
+            setTimeout(() => {
+              window.print();
+            }, 500);
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  return (
+    <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto`}>
+      <div className={`${isDark ? 'bg-gray-900' : 'bg-white'} rounded-lg p-5 sm:p-8 w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl my-auto`}>
+        <h3 className={`text-xl sm:text-2xl font-bold mb-4 sm:mb-6 break-words ${isDark ? 'text-white' : 'text-gray-800'}`}>
+          🖨️ Print Card
+        </h3>
+        
+        <div className={`mb-5 sm:mb-6 p-3 sm:p-4 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+          <p className={`text-xs sm:text-sm mb-2 sm:mb-3 break-words ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            <span className="font-semibold">Name:</span>
+            <br className="sm:hidden" />
+            <span className="hidden sm:inline"> </span>
+            {organism.name}
+          </p>
+          <p className={`text-xs sm:text-sm italic mb-4 sm:mb-5 break-words ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
+            <span className="font-semibold">Scientific:</span>
+            <br className="sm:hidden" />
+            <span className="hidden sm:inline"> </span>
+            {organism.scientific_name}
+          </p>
+          
+          <div className={`flex justify-center py-3 sm:py-4 ${isDark ? 'bg-gray-700' : 'bg-white'} rounded overflow-hidden`}>
+            <QRCodeSVG 
+              value={`${window.location.origin}${window.location.pathname}?organism=${organism.id}`} 
+              size={Math.min(140, window.innerWidth - 80)}
+              level="H"
+              includeMargin={true}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <button
+            onClick={handlePrint}
+            className="flex-1 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg font-medium transition-all text-sm sm:text-base"
+          >
+            🖨️ <span className="hidden xs:inline">Print</span>
+          </button>
+          <button
+            onClick={onClose}
+            className={`flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg font-medium transition-all text-sm sm:text-base ${
+              isDark 
+                ? 'bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white' 
+                : 'bg-gray-300 hover:bg-gray-400 active:bg-gray-500 text-gray-800'
+            }`}
+          >
+            <span className="hidden sm:inline">Close</span>
+            <span className="sm:hidden">✕</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Manage Organisms Component
 const ManageOrganisms = ({ organisms, token, isDark, onUpdate }) => {
   const [editingOrganism, setEditingOrganism] = useState(null);
+  const [printOrganism, setPrintOrganism] = useState(null);
 
   const handleDelete = async (organismId, organismName) => {
     if (window.confirm(`Are you sure you want to delete "${organismName}"? This action cannot be undone.`)) {
@@ -1380,18 +1565,27 @@ const ManageOrganisms = ({ organisms, token, isDark, onUpdate }) => {
                 )}
               </div>
               
-              <div className="flex gap-2 ml-0 sm:ml-4 w-full sm:w-auto">
+              <div className="flex gap-1.5 sm:gap-2 ml-0 sm:ml-4 w-full sm:w-auto flex-wrap">
                 <button
                   onClick={() => setEditingOrganism(organism)}
-                  className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all"
+                  className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white px-2.5 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-all min-h-[44px] sm:min-h-auto flex items-center justify-center"
                 >
-                  ✏️ <span className="hidden sm:inline">Edit</span>
+                  <span className="text-lg sm:text-base">✏️</span>
+                  <span className="hidden sm:inline ml-1">Edit</span>
+                </button>
+                <button
+                  onClick={() => setPrintOrganism(organism)}
+                  className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-2.5 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-all min-h-[44px] sm:min-h-auto flex items-center justify-center"
+                >
+                  <span className="text-lg sm:text-base">🖨️</span>
+                  <span className="hidden sm:inline ml-1">Print</span>
                 </button>
                 <button
                   onClick={() => handleDelete(organism.id, organism.name)}
-                  className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm transition-all"
+                  className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 active:bg-red-800 text-white px-2.5 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-all min-h-[44px] sm:min-h-auto flex items-center justify-center"
                 >
-                  🗑️ <span className="hidden sm:inline">Delete</span>
+                  <span className="text-lg sm:text-base">🗑️</span>
+                  <span className="hidden sm:inline ml-1">Delete</span>
                 </button>
               </div>
             </div>
@@ -1405,6 +1599,14 @@ const ManageOrganisms = ({ organisms, token, isDark, onUpdate }) => {
           </div>
         )}
       </div>
+      
+      {printOrganism && (
+        <PrintOrganismModal 
+          organism={printOrganism} 
+          isDark={isDark} 
+          onClose={() => setPrintOrganism(null)} 
+        />
+      )}
     </div>
   );
 };
