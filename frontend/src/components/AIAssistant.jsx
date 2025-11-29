@@ -56,9 +56,9 @@ const AIAssistant = ({ onDataSelected, onClose }) => {
         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-2">
-              <span className="text-3xl">🤖</span> AI Assistant
+              <span className="text-3xl"></span> Intelligence
             </h2>
-            <p className="text-blue-100 text-sm mt-1">Auto-fill organism data intelligently</p>
+            <p className="text-blue-100 text-sm mt-1">Auto-fill organism data by Intelligence</p>
           </div>
           <button
             onClick={onClose}
@@ -95,7 +95,7 @@ const AIAssistant = ({ onDataSelected, onClose }) => {
                   </>
                 ) : (
                   <>
-                    <span>✨</span> Generate
+                    <span>✨</span>Generate
                   </>
                 )}
               </button>
@@ -226,7 +226,7 @@ const AIAssistant = ({ onDataSelected, onClose }) => {
               {/* Message */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
-                  <span className="font-medium">ℹ️ Note:</span> AI-generated data is a suggestion. Please review all details and edit as needed for accuracy.
+                  <span className="font-medium">ℹ️ Note:</span> Intelligence can make Mistakes like Humans. Please Review all Generated Data Carefully before Using it in your Collection.
                 </p>
               </div>
 
@@ -258,7 +258,7 @@ const AIAssistant = ({ onDataSelected, onClose }) => {
             <div className="text-center py-12 text-gray-500">
               <div className="text-5xl mb-4">🔍</div>
               <p className="text-lg font-medium">Enter an animal name to get started!</p>
-              <p className="text-sm mt-2">Try: Lion, Tiger, Elephant, Dolphin, or Penguin</p>
+              <p className="text-sm mt-2">Try: Any Animal or Organims in Your Mind</p>
             </div>
           )}
 
