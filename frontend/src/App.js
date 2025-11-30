@@ -180,7 +180,14 @@ const Homepage = () => {
         setTimeout(() => navigate('/admin'), 500);
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Email verification failed';
+      let errorMsg = 'Email verification failed';
+      if (error.response?.data?.detail) {
+        errorMsg = typeof error.response.data.detail === 'string' 
+          ? error.response.data.detail 
+          : 'Email verification failed';
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
       showToast(`❌ ${errorMsg}`, 'error', 3000);
     } finally {
       setLoginLoading(false);
@@ -200,7 +207,14 @@ const Homepage = () => {
         setTimeout(() => navigate('/admin'), 500);
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Google login failed';
+      let errorMsg = 'Google login failed';
+      if (error.response?.data?.detail) {
+        errorMsg = typeof error.response.data.detail === 'string' 
+          ? error.response.data.detail 
+          : 'Google login failed';
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
       showToast(`❌ ${errorMsg}`, 'error', 3000);
     } finally {
       setLoginLoading(false);
@@ -1793,10 +1807,23 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
         }, 4000);
       }
     } catch (error) {
-      console.error('❌ Submission Error:', error.response?.data || error.message);
-      const errMsg = error.response?.data?.detail || error.message;
+      console.error('❌ Submission Error:', error);
+      let errMsg = 'An error occurred. Please try again.';
+      
+      if (error.response?.data?.detail) {
+        errMsg = typeof error.response.data.detail === 'string' 
+          ? error.response.data.detail 
+          : JSON.stringify(error.response.data.detail);
+      } else if (error.message) {
+        errMsg = error.message;
+      } else if (error.response?.data) {
+        errMsg = typeof error.response.data === 'string' 
+          ? error.response.data 
+          : JSON.stringify(error.response.data);
+      }
+      
       setErrorMessage('❌ Error: ' + errMsg);
-      showToast('❌ Error: ' + errMsg, 'error', 3000);
+      showToast('❌ ' + errMsg, 'error', 3000);
     } finally {
       setLoading(false);
     }
