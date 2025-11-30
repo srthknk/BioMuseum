@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
@@ -17,30 +17,43 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
   const [cameraPermission, setCameraPermission] = useState('pending'); // pending, granted, denied
   const [facingMode, setFacingMode] = useState('environment'); // 'environment' (back) or 'user' (front)
 
-  // Request camera access
-  const startCamera = async () => {
+  // Stop camera (wrapped in useCallback to prevent infinite deps issues)
+  const stopCamera = useCallback(() => {
+    console.log('Stopping camera...');
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setCameraActive(false);
+    console.log('✅ Camera stopped');
+  }, [stream]);
+
+  // Request camera access (wrapped in useCallback)
+  const startCamera = useCallback(async () => {
     setError(null);
-    
-    // First, set camera to active so video element renders
     setCameraActive(true);
-    
-    // Wait longer for DOM to fully update with video element
-    await new Promise(resolve => setTimeout(resolve, 200));
     
     try {
       console.log('📸 Starting camera...');
       
-      // Check multiple times if videoRef is available
-      let videoElement = videoRef.current;
-      if (!videoElement) {
-        console.warn('Video ref not available, waiting longer...');
-        await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for DOM to render the video element
+      let videoElement = null;
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      while (!videoElement && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100));
         videoElement = videoRef.current;
+        attempts++;
+        console.log(`Attempt ${attempts}: videoRef.current =`, videoElement ? 'found' : 'not found');
       }
       
       if (!videoElement) {
-        console.error('Video element still not found!');
-        setError('Camera element initialization failed. Please try again.');
+        console.error('Video element not found after max attempts');
+        setError('Camera element not ready. Please try again.');
         setCameraActive(false);
         return;
       }
@@ -63,6 +76,7 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
       // Assign stream to video element
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        console.log('✅ Stream assigned to video element');
         
         // Wait a tick, then play
         setTimeout(() => {
@@ -93,21 +107,7 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
         setError('Cannot access camera: ' + err.message);
       }
     }
-  };
-
-  // Stop camera
-  const stopCamera = () => {
-    console.log('Stopping camera...');
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    setCameraActive(false);
-    console.log('✅ Camera stopped');
-  };
+  }, [facingMode]);
 
   // Flip camera between front and back
   const flipCamera = async () => {
