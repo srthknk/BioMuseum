@@ -52,10 +52,11 @@ else:
 
 db = None
 organisms_collection = None
+suggestions_collection = None
 mongodb_connected = False
 
 async def init_mongodb():
-    global db, organisms_collection, mongodb_connected
+    global db, organisms_collection, suggestions_collection, mongodb_connected
     max_retries = 15  # Increased from 10 to 15
     retry_count = 0
     
@@ -97,9 +98,11 @@ async def init_mongodb():
             
             db = client[os.environ.get('DB_NAME', 'biomuseum')]
             organisms_collection = db.organisms
+            suggestions_collection = db.suggestions
             
             # Test that we can actually query
             test_count = await organisms_collection.count_documents({})
+            test_suggestions = await suggestions_collection.count_documents({})
             
             mongodb_connected = True
             print(f"[OK] ✓ Successfully connected to MongoDB! Found {test_count} organisms in database")
@@ -194,6 +197,21 @@ class AdminLogin(BaseModel):
 class AdminToken(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class Suggestion(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_name: str
+    organism_name: str
+    description: Optional[str] = ""
+    status: str = "pending"  # pending, approved, rejected
+    ai_verification: Optional[dict] = None
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+class SuggestionCreate(BaseModel):
+    user_name: str
+    organism_name: str
+    description: Optional[str] = ""
 
 # Database functions - MongoDB only (no JSON fallback)
 async def get_organisms_list():
@@ -668,6 +686,145 @@ async def delete_organism(organism_id: str, _: bool = Depends(verify_admin_token
         raise
     except Exception as e:
         logging.error(f"Error deleting organism: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== SUGGESTION ENDPOINTS ====================
+
+# Get all suggestions (admin only)
+@api_router.get("/admin/suggestions")
+async def get_all_suggestions(_: bool = Depends(verify_admin_token)):
+    try:
+        suggestions = await suggestions_collection.find().to_list(1000)
+        return [Suggestion(**sugg) for sugg in suggestions]
+    except Exception as e:
+        logging.error(f"Error fetching suggestions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get pending suggestions (admin only)
+@api_router.get("/admin/suggestions/pending")
+async def get_pending_suggestions(_: bool = Depends(verify_admin_token)):
+    try:
+        suggestions = await suggestions_collection.find({"status": "pending"}).to_list(1000)
+        return [Suggestion(**sugg) for sugg in suggestions]
+    except Exception as e:
+        logging.error(f"Error fetching pending suggestions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Create new suggestion (public)
+@api_router.post("/suggestions")
+async def create_suggestion(suggestion: SuggestionCreate):
+    try:
+        if not suggestion.user_name.strip() or not suggestion.organism_name.strip():
+            raise HTTPException(status_code=400, detail="User name and organism name are required")
+        
+        suggestion_data = Suggestion(
+            user_name=suggestion.user_name,
+            organism_name=suggestion.organism_name,
+            description=suggestion.description or ""
+        )
+        
+        await suggestions_collection.insert_one(suggestion_data.dict())
+        return {"message": "Suggestion submitted successfully", "id": suggestion_data.id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error creating suggestion: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Update suggestion status (admin only)
+@api_router.put("/admin/suggestions/{suggestion_id}/status")
+async def update_suggestion_status(suggestion_id: str, status: str, _: bool = Depends(verify_admin_token)):
+    try:
+        if status not in ["pending", "approved", "rejected"]:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        
+        result = await suggestions_collection.update_one(
+            {"id": suggestion_id},
+            {"$set": {"status": status, "updated_at": datetime.utcnow().isoformat()}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Suggestion not found")
+        
+        return {"message": f"Suggestion {status} successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating suggestion: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Verify suggestion with AI (admin only)
+@api_router.post("/admin/suggestions/{suggestion_id}/verify")
+async def verify_suggestion_ai(suggestion_id: str, _: bool = Depends(verify_admin_token)):
+    try:
+        suggestion = await suggestions_collection.find_one({"id": suggestion_id})
+        if not suggestion:
+            raise HTTPException(status_code=404, detail="Suggestion not found")
+        
+        if not HAS_GENAI or not GEMINI_API_KEY:
+            raise HTTPException(status_code=503, detail="AI service not available")
+        
+        # Use Gemini to verify organism
+        model = genai.GenerativeModel('gemini-pro')
+        verification_prompt = f"""
+        Is "{suggestion['organism_name']}" a real organism/animal/plant species that exists in nature?
+        
+        Respond with a JSON object:
+        {{
+            "is_authentic": true/false,
+            "reason": "explanation",
+            "type": "animal/plant/microorganism/fungus/other",
+            "common_name": "if authentic",
+            "scientific_name": "if authentic"
+        }}
+        """
+        
+        response = model.generate_content(verification_prompt)
+        response_text = response.text.strip()
+        
+        # Extract JSON from response
+        import json
+        try:
+            # Try to find JSON in the response
+            json_start = response_text.find('{')
+            json_end = response_text.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                verification_data = json.loads(response_text[json_start:json_end])
+            else:
+                verification_data = {"is_authentic": False, "reason": "Could not parse response"}
+        except json.JSONDecodeError:
+            verification_data = {"is_authentic": False, "reason": "Invalid response format"}
+        
+        # Update suggestion with verification
+        await suggestions_collection.update_one(
+            {"id": suggestion_id},
+            {
+                "$set": {
+                    "ai_verification": verification_data,
+                    "updated_at": datetime.utcnow().isoformat()
+                }
+            }
+        )
+        
+        return verification_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error verifying suggestion: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Delete suggestion (admin only)
+@api_router.delete("/admin/suggestions/{suggestion_id}")
+async def delete_suggestion(suggestion_id: str, _: bool = Depends(verify_admin_token)):
+    try:
+        result = await suggestions_collection.delete_one({"id": suggestion_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Suggestion not found")
+        return {"message": "Suggestion deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error deleting suggestion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 app.include_router(api_router)
