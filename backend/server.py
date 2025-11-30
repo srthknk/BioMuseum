@@ -772,10 +772,14 @@ async def create_suggestion(suggestion: SuggestionCreate):
         if not suggestion.user_name.strip() or not suggestion.organism_name.strip():
             raise HTTPException(status_code=400, detail="User name and organism name are required")
         
+        if not suggestion.educational_level or not suggestion.educational_level.strip():
+            raise HTTPException(status_code=400, detail="Class/Standard is required")
+        
         suggestion_data = Suggestion(
             user_name=suggestion.user_name,
             organism_name=suggestion.organism_name,
-            description=suggestion.description or ""
+            description=suggestion.description or "",
+            educational_level=suggestion.educational_level
         )
         
         await suggestions_collection.insert_one(suggestion_data.dict())
