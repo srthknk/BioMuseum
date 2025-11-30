@@ -32,6 +32,19 @@ const API = `${BACKEND_URL}/api`;
 // Configure axios with longer timeout
 axios.defaults.timeout = 30000; // 30 seconds for long operations
 
+// Simple toast notification function
+const showToast = (message, type = 'success', duration = 3000) => {
+  const toast = document.createElement('div');
+  toast.className = `fixed top-4 right-4 px-4 sm:px-6 py-3 sm:py-4 rounded-lg shadow-lg text-white text-sm sm:text-base font-semibold z-[9999] animate-pulse ${
+    type === 'success' ? 'bg-green-500' : 
+    type === 'error' ? 'bg-red-500' : 
+    'bg-blue-500'
+  }`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), duration);
+};
+
 // Utility function to capitalize first letter of organism name
 const capitalizeOrganismName = (name) => {
   if (!name) return '';
@@ -144,9 +157,10 @@ const Homepage = () => {
       const response = await axios.post(`${API}/admin/login`, { username, password });
       login(response.data.access_token);
       setShowAdminLogin(false);
+      showToast('✅ Welcome Admin! Login successful', 'success', 2500);
       navigate('/admin');
     } catch (error) {
-      alert('Invalid credentials');
+      showToast('❌ Invalid credentials', 'error', 3000);
     } finally {
       setLoginLoading(false);
     }
@@ -162,12 +176,12 @@ const Homepage = () => {
       if (response.data.success) {
         login(response.data.access_token);
         setShowAdminLogin(false);
-        navigate('/admin');
-        alert(`✅ Welcome ${response.data.email}!`);
+        showToast(`✅ Welcome ${response.data.email}!`, 'success', 2500);
+        setTimeout(() => navigate('/admin'), 500);
       }
     } catch (error) {
       const errorMsg = error.response?.data?.detail || 'Email verification failed';
-      alert(`❌ ${errorMsg}`);
+      showToast(`❌ ${errorMsg}`, 'error', 3000);
     } finally {
       setLoginLoading(false);
     }
@@ -181,12 +195,13 @@ const Homepage = () => {
       if (response.data.success) {
         login(response.data.access_token);
         setShowAdminLogin(false);
-        navigate('/admin');
-        alert(`✅ Welcome ${response.data.name || response.data.email}!`);
+        const adminName = response.data.name || response.data.email;
+        showToast(`✅ Welcome ${adminName}!`, 'success', 2500);
+        setTimeout(() => navigate('/admin'), 500);
       }
     } catch (error) {
       const errorMsg = error.response?.data?.detail || 'Google login failed';
-      alert(`❌ ${errorMsg}`);
+      showToast(`❌ ${errorMsg}`, 'error', 3000);
     } finally {
       setLoginLoading(false);
     }
@@ -696,7 +711,11 @@ const AdminPanel = () => {
                 <i className="fas fa-home"></i> <span>Home</span>
               </button>
               <button
-                onClick={logout}
+                onClick={() => {
+                  logout();
+                  showToast('👋 You have been logged out', 'success', 2500);
+                  navigate('/');
+                }}
                 className="bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all flex items-center gap-1"
               >
                 <i className="fas fa-sign-out-alt"></i> <span className="hidden sm:inline">Logout</span>
@@ -1366,7 +1385,7 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
         timeout: 30000 // 30 second timeout
       });
       
-      alert('Organism added successfully!');
+      showToast('🎉 Organism added successfully!', 'success', 3000);
       setFormData({
         name: '',
         scientific_name: '',
@@ -1381,7 +1400,7 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
       onSuccess();
     } catch (error) {
       const errorMsg = error.response?.data?.detail || error.message || 'Network error - please check your connection';
-      alert('Error adding organism: ' + errorMsg);
+      showToast('❌ Error: ' + errorMsg, 'error', 3000);
       console.error('Detailed error:', error);
     } finally {
       setLoading(false);
@@ -1648,23 +1667,33 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
 
           {/* Image Preview */}
           {formData.images.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
-              {formData.images.map((image, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={image}
-                    alt={`Preview ${index + 1}`}
-                    className="w-full h-20 sm:h-24 object-cover rounded-lg"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+            <div className="mt-4">
+              <p className={`text-sm font-semibold mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                📸 {formData.images.length} image{formData.images.length !== 1 ? 's' : ''} selected
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+                {formData.images.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <div className={`w-full h-20 sm:h-24 rounded-lg overflow-hidden border-2 ${isDark ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-100'}`}>
+                      <img
+                        src={image}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext x="50" y="50" text-anchor="middle" dy=".3em" fill="%23999" font-size="12"%3EImage not available%3C/text%3E%3C/svg%3E';
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center shadow-lg"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -1752,8 +1781,10 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
       const response = await axios.post(`${API}/suggestions`, formData);
       
       if (response.status === 201 || response.status === 200) {
-        setSuccessMessage(`✅ Thank you ${formData.user_name}! Your suggestion for "${formData.organism_name}" has been submitted successfully!`);
+        const successMsg = `Thank you ${formData.user_name}! Suggestion submitted!`;
+        setSuccessMessage(`✅ ${successMsg}`);
         setShowSuccess(true);
+        showToast(`🎉 ${successMsg}`, 'success', 3000);
         setFormData({ user_name: '', organism_name: '', description: '', educational_level: '' });
         
         // Auto-close after 4 seconds
@@ -1763,7 +1794,9 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
       }
     } catch (error) {
       console.error('❌ Submission Error:', error.response?.data || error.message);
-      setErrorMessage('❌ Error: ' + (error.response?.data?.detail || error.message));
+      const errMsg = error.response?.data?.detail || error.message;
+      setErrorMessage('❌ Error: ' + errMsg);
+      showToast('❌ Error: ' + errMsg, 'error', 3000);
     } finally {
       setLoading(false);
     }
@@ -2160,16 +2193,29 @@ const UsersHistoryTab = ({ token, isDark }) => {
 
   const fetchSuggestions = async () => {
     try {
+      console.log('📡 Fetching suggestions from:', `${API}/admin/suggestions`);
+      console.log('🔑 Token:', token ? 'Present' : 'Missing');
+      
       const response = await axios.get(`${API}/admin/suggestions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      console.log('✅ Response received:', response.data);
+      console.log('📊 Total suggestions:', response.data?.length || 0);
+      
       // Sort by date descending (newest first)
       const sorted = response.data.sort((a, b) => 
         new Date(b.created_at) - new Date(a.created_at)
       );
       setSuggestions(sorted);
     } catch (error) {
-      console.error('Error fetching suggestions:', error);
+      console.error('❌ Error fetching suggestions:', error);
+      console.error('📍 Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url
+      });
       setSuggestions([]);
     } finally {
       setLoading(false);
@@ -2185,12 +2231,16 @@ const UsersHistoryTab = ({ token, isDark }) => {
   const formatDate = (dateString) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { 
+      // Convert to India timezone (UTC+5:30)
+      return date.toLocaleString('en-US', { 
         year: 'numeric', 
         month: 'short', 
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Kolkata'
       });
     } catch {
       return dateString;
@@ -2364,10 +2414,11 @@ const ManageOrganisms = ({ organisms, token, isDark, onUpdate }) => {
         await axios.delete(`${API}/admin/organisms/${organismId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        alert('Organism deleted successfully!');
+        showToast(`🗑️ "${organismName}" deleted successfully!`, 'success', 3000);
         onUpdate();
       } catch (error) {
-        alert('Error deleting organism: ' + (error.response?.data?.detail || error.message));
+        const errMsg = error.response?.data?.detail || error.message;
+        showToast('❌ Error: ' + errMsg, 'error', 3000);
       }
     }
   };
@@ -2540,10 +2591,11 @@ const EditOrganismForm = ({ organism, token, onSuccess, onCancel }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      alert('Organism updated successfully!');
+      showToast('✏️ Organism updated successfully!', 'success', 3000);
       onSuccess();
     } catch (error) {
-      alert('Error updating organism: ' + (error.response?.data?.detail || error.message));
+      const errMsg = error.response?.data?.detail || error.message;
+      showToast('❌ Error: ' + errMsg, 'error', 3000);
     } finally {
       setLoading(false);
     }
