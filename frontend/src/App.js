@@ -4,7 +4,6 @@ import axios from "axios";
 import { QrReader } from 'react-qr-reader';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { QRCodeSVG } from 'qrcode.react';
-import AdminCameraTab from './components/AdminCameraTab';
 import "./App.css";
 
 // Determine backend URL based on current location
@@ -764,14 +763,6 @@ const AdminPanel = () => {
               📊 Dashboard
             </button>
             <button
-              onClick={() => setActiveView('camera')}
-              className={`px-6 py-4 font-semibold transition-all ${activeView === 'camera' 
-                ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
-                : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
-            >
-              📸 Camera ID
-            </button>
-            <button
               onClick={() => setActiveView('add')}
               className={`px-6 py-4 font-semibold transition-all ${activeView === 'add' 
                 ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
@@ -813,12 +804,6 @@ const AdminPanel = () => {
                 className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'dashboard' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
               >
                 📊 Dashboard
-              </button>
-              <button
-                onClick={() => { setActiveView('camera'); setMobileMenuOpen(false); }}
-                className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'camera' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
-              >
-                📸 Camera ID
               </button>
               <button
                 onClick={() => { setActiveView('add'); setMobileMenuOpen(false); }}
@@ -870,13 +855,6 @@ const AdminPanel = () => {
               fetchOrganisms();
               setActiveView('manage');
             }} 
-          />
-        )}
-        {activeView === 'camera' && (
-          <AdminCameraTab
-            token={token}
-            isDark={isDark}
-            onIdentificationSuccess={handleApprovalSuccess}
           />
         )}
         {activeView === 'manage' && (
