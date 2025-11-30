@@ -1027,6 +1027,17 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
               </div>
               <div>
                 <p className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  🎓 Class/Standard:
+                </p>
+                <p className={`text-sm sm:text-base font-semibold ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+                  {suggestion.educational_level || 'Not specified'}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                   🔬 Organism Name:
                 </p>
                 <p className={`text-sm sm:text-base font-semibold ${isDark ? 'text-green-400' : 'text-green-700'}`}>
@@ -1716,8 +1727,19 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.user_name.trim() || !formData.organism_name.trim() || !formData.educational_level.trim()) {
-      setErrorMessage('Please fill in all required fields (Name, Organism, and Class/Standard)');
+    // Validate all required fields
+    if (!formData.user_name.trim()) {
+      setErrorMessage('Please enter your name');
+      return;
+    }
+    
+    if (!formData.organism_name.trim()) {
+      setErrorMessage('Please enter the organism name');
+      return;
+    }
+    
+    if (!formData.educational_level || !formData.educational_level.trim()) {
+      setErrorMessage('Please select your class/standard');
       return;
     }
 
@@ -1726,6 +1748,7 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
     setSuccessMessage('');
 
     try {
+      console.log('📤 Submitting suggestion with data:', formData);
       const response = await axios.post(`${API}/suggestions`, formData);
       
       if (response.status === 201 || response.status === 200) {
@@ -1739,6 +1762,7 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
         }, 4000);
       }
     } catch (error) {
+      console.error('❌ Submission Error:', error.response?.data || error.message);
       setErrorMessage('❌ Error: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
@@ -2120,9 +2144,18 @@ const PrintOrganismModal = ({ organism, isDark, onClose }) => {
 const UsersHistoryTab = ({ token, isDark }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchSuggestions();
+    
+    // Auto-refresh suggestions every 5 seconds to show new submissions
+    const interval = setInterval(() => {
+      fetchSuggestions();
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchSuggestions = async () => {
@@ -2140,7 +2173,13 @@ const UsersHistoryTab = ({ token, isDark }) => {
       setSuggestions([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    await fetchSuggestions();
   };
 
   const formatDate = (dateString) => {
@@ -2167,9 +2206,45 @@ const UsersHistoryTab = ({ token, isDark }) => {
     return colors[status] || colors.pending;
   };
 
+  const handleDeleteUser = async (suggestionId) => {
+    if (!window.confirm('Are you sure you want to remove this user suggestion?')) {
+      return;
+    }
+
+    setDeletingId(suggestionId);
+    try {
+      await axios.delete(
+        `${API}/admin/suggestions/${suggestionId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
+      alert('✅ User suggestion removed successfully!');
+    } catch (error) {
+      alert('Error removing suggestion: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div>
-      <h2 className={`text-2xl sm:text-3xl font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-800'}`}>👥 Users Suggestion History</h2>
+      <div className="flex items-center justify-between gap-3 mb-6 flex-col sm:flex-row">
+        <h2 className={`text-2xl sm:text-3xl font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>👥 Users Suggestion History</h2>
+        <button
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          className={`px-4 py-2 rounded-lg font-semibold transition-all text-sm flex items-center gap-2 ${
+            refreshing 
+              ? 'bg-gray-500 cursor-not-allowed text-white' 
+              : isDark 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                : 'bg-blue-500 hover:bg-blue-600 text-white'
+          }`}
+        >
+          <i className={`fas fa-sync ${refreshing ? 'fa-spin' : ''}`}></i>
+          <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+        </button>
+      </div>
       
       {loading ? (
         <div className={`text-center py-8 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -2186,10 +2261,12 @@ const UsersHistoryTab = ({ token, isDark }) => {
             <thead>
               <tr className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
                 <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>User Name</th>
+                <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Class/Standard</th>
                 <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Organism</th>
                 <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Description</th>
                 <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Date</th>
                 <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Status</th>
+                <th className={`px-4 sm:px-6 py-4 text-center text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -2197,6 +2274,9 @@ const UsersHistoryTab = ({ token, isDark }) => {
                 <tr key={suggestion.id} className={`border-t ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} transition-colors`}>
                   <td className={`px-4 sm:px-6 py-4 text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
                     {suggestion.user_name}
+                  </td>
+                  <td className={`px-4 sm:px-6 py-4 text-sm font-semibold ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+                    {suggestion.educational_level || '—'}
                   </td>
                   <td className={`px-4 sm:px-6 py-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                     <span className="font-semibold">🦁 {capitalizeOrganismName(suggestion.organism_name)}</span>
@@ -2211,6 +2291,20 @@ const UsersHistoryTab = ({ token, isDark }) => {
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(suggestion.status)}`}>
                       {suggestion.status.charAt(0).toUpperCase() + suggestion.status.slice(1)}
                     </span>
+                  </td>
+                  <td className={`px-4 sm:px-6 py-4 text-center`}>
+                    <button
+                      onClick={() => handleDeleteUser(suggestion.id)}
+                      disabled={deletingId === suggestion.id}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 disabled:bg-gray-500 text-white transition-colors"
+                      title="Delete this user suggestion"
+                    >
+                      {deletingId === suggestion.id ? (
+                        <i className="fas fa-spinner fa-spin"></i>
+                      ) : (
+                        <span className="text-lg">×</span>
+                      )}
+                    </button>
                   </td>
                 </tr>
               ))}
