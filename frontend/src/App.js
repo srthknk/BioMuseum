@@ -641,6 +641,7 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(false);
   const [editingOrganism, setEditingOrganism] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [approvedOrganismData, setApprovedOrganismData] = useState(null);
 
   useEffect(() => {
     if (isAdmin) {
@@ -655,6 +656,11 @@ const AdminPanel = () => {
     } catch (error) {
       console.error('Error fetching organisms:', error);
     }
+  };
+
+  const handleApprovalSuccess = (approvedData) => {
+    setApprovedOrganismData(approvedData);
+    setActiveView('add');
   };
 
   if (!isAdmin) {
@@ -802,7 +808,9 @@ const AdminPanel = () => {
           <AddOrganismForm 
             token={token} 
             isDark={isDark}
+            initialData={approvedOrganismData}
             onSuccess={() => {
+              setApprovedOrganismData(null);
               fetchOrganisms();
               setActiveView('manage');
             }} 
@@ -821,6 +829,7 @@ const AdminPanel = () => {
           <SuggestedOrganismsTab 
             token={token}
             isDark={isDark}
+            onApprovalSuccess={handleApprovalSuccess}
           />
         )}
         {activeView === 'users' && (
@@ -835,10 +844,11 @@ const AdminPanel = () => {
 };
 
 // Suggested Organisms Tab Component
-const SuggestedOrganismsTab = ({ token, isDark }) => {
+const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [verifyingId, setVerifyingId] = useState(null);
+  const [approvingId, setApprovingId] = useState(null);
 
   useEffect(() => {
     fetchSuggestions();
@@ -883,21 +893,30 @@ const SuggestedOrganismsTab = ({ token, isDark }) => {
     }
   };
 
-  const handleApprove = async (suggestionId) => {
+  const handleApprove = async (suggestionId, suggestion) => {
+    setApprovingId(suggestionId);
     try {
-      await axios.put(
-        `${API}/admin/suggestions/${suggestionId}/status`,
-        null,
-        { 
-          params: { status: 'approved' },
-          headers: { Authorization: `Bearer ${token}` } 
-        }
+      const response = await axios.post(
+        `${API}/admin/suggestions/${suggestionId}/approve`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       
+      // response.data should contain: organism_data (with all fields) and images array
+      const approvedData = response.data;
+      
+      // Call parent callback with organism data
+      if (onApprovalSuccess) {
+        onApprovalSuccess(approvedData);
+      }
+      
+      // Remove from suggestions list
       setSuggestions(prev => prev.filter(sugg => sugg.id !== suggestionId));
-      alert('✅ Suggestion approved!');
+      alert('✅ Suggestion approved! Form auto-filled in Add Organism tab.');
     } catch (error) {
       alert('Error approving suggestion: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setApprovingId(null);
     }
   };
 
@@ -1024,10 +1043,11 @@ const SuggestedOrganismsTab = ({ token, isDark }) => {
               
               {suggestion.ai_verification?.is_authentic && (
                 <button
-                  onClick={() => handleApprove(suggestion.id)}
-                  className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm transition-all"
+                  onClick={() => handleApprove(suggestion.id, suggestion)}
+                  disabled={approvingId === suggestion.id}
+                  className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm transition-all"
                 >
-                  ✅ Approve
+                  {approvingId === suggestion.id ? '⏳ Approving...' : '✅ Approve'}
                 </button>
               )}
               
@@ -1094,7 +1114,7 @@ const DashboardView = ({ organisms, isDark }) => {
 };
 
 // Add Organism Form Component
-const AddOrganismForm = ({ token, isDark, onSuccess }) => {
+const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
   const [formData, setFormData] = useState({
     name: '',
     scientific_name: '',
@@ -1120,6 +1140,29 @@ const AddOrganismForm = ({ token, isDark, onSuccess }) => {
   const [showAiHelper, setShowAiHelper] = useState(false);
   const [aiImageLoading, setAiImageLoading] = useState(false);
   const [aiImageOrganism, setAiImageOrganism] = useState('');
+
+  // Auto-fill form when initialData is provided (from approval)
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || initialData.organism_name || '',
+        scientific_name: initialData.scientific_name || '',
+        classification: initialData.classification || {
+          kingdom: '',
+          phylum: '',
+          class: '',
+          order: '',
+          family: '',
+          genus: '',
+          species: ''
+        },
+        morphology: initialData.morphology || '',
+        physiology: initialData.physiology || '',
+        description: initialData.description || '',
+        images: initialData.images || []
+      });
+    }
+  }, [initialData]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -1295,7 +1338,14 @@ const AddOrganismForm = ({ token, isDark, onSuccess }) => {
   return (
     <div>
       <div className="flex items-center justify-between mb-6 flex-col sm:flex-row gap-4">
-        <h2 className={`text-2xl sm:text-3xl font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>➕ Add New Organism</h2>
+        <div className="flex-1">
+          <h2 className={`text-2xl sm:text-3xl font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>➕ Add New Organism</h2>
+          {initialData && (
+            <p className={`text-sm mt-2 ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+              ✅ Auto-filled from approved suggestion
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setShowAiHelper(!showAiHelper)}
