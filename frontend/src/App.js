@@ -659,7 +659,9 @@ const AdminPanel = () => {
   };
 
   const handleApprovalSuccess = (approvedData) => {
+    console.log('🔄 handleApprovalSuccess called with:', approvedData);
     setApprovedOrganismData(approvedData);
+    console.log('✅ State updated, switching to add view...');
     setActiveView('add');
   };
 
@@ -902,11 +904,37 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // response.data should contain: organism_data (with all fields) and images array
-      const approvedData = response.data;
+      // Extract organism_data from the response
+      // Backend returns: { success: true, organism_data: {...}, suggestion_id, message }
+      const organizmData = response.data.organism_data || response.data;
+      
+      console.log('🎉 Approval Response:', response.data);
+      console.log('📊 Extracted Organism Data:', organizmData);
+      
+      // Transform to frontend format if needed
+      const approvedData = {
+        name: organizmData.name || '',
+        scientific_name: organizmData.scientific_name || '',
+        classification: organizmData.classification || {
+          kingdom: '',
+          phylum: '',
+          class: '',
+          order: '',
+          family: '',
+          genus: '',
+          species: ''
+        },
+        morphology: organizmData.morphology || '',
+        physiology: organizmData.physiology || '',
+        description: organizmData.description || '',
+        images: organizmData.images || []
+      };
+      
+      console.log('✅ Formatted Approved Data:', approvedData);
       
       // Call parent callback with organism data
       if (onApprovalSuccess) {
+        console.log('📤 Calling onApprovalSuccess with:', approvedData);
         onApprovalSuccess(approvedData);
       }
       
@@ -914,6 +942,7 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
       setSuggestions(prev => prev.filter(sugg => sugg.id !== suggestionId));
       alert('✅ Suggestion approved! Form auto-filled in Add Organism tab.');
     } catch (error) {
+      console.error('❌ Approval Error:', error);
       alert('Error approving suggestion: ' + (error.response?.data?.detail || error.message));
     } finally {
       setApprovingId(null);
@@ -1143,9 +1172,11 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
 
   // Auto-fill form when initialData is provided (from approval)
   useEffect(() => {
-    if (initialData) {
-      setFormData({
-        name: initialData.name || initialData.organism_name || '',
+    if (initialData && Object.keys(initialData).length > 0) {
+      console.log('📥 useEffect triggered with initialData:', initialData);
+      
+      const newFormData = {
+        name: initialData.name || '',
         scientific_name: initialData.scientific_name || '',
         classification: initialData.classification || {
           kingdom: '',
@@ -1159,8 +1190,13 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
         morphology: initialData.morphology || '',
         physiology: initialData.physiology || '',
         description: initialData.description || '',
-        images: initialData.images || []
-      });
+        images: Array.isArray(initialData.images) ? initialData.images : []
+      };
+      
+      console.log('✏️ Setting formData to:', newFormData);
+      setFormData(newFormData);
+    } else {
+      console.log('⚠️ initialData is empty or null:', initialData);
     }
   }, [initialData]);
 
@@ -1337,21 +1373,23 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 flex-col sm:flex-row gap-4">
-        <div className="flex-1">
+      <div className="flex items-center justify-between mb-6 flex-col sm:flex-row gap-3 sm:gap-4">
+        <div className="flex-1 w-full">
           <h2 className={`text-2xl sm:text-3xl font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>➕ Add New Organism</h2>
           {initialData && (
-            <p className={`text-sm mt-2 ${isDark ? 'text-green-400' : 'text-green-700'}`}>
-              ✅ Auto-filled from approved suggestion
-            </p>
+            <div className={`mt-2 p-2 sm:p-3 rounded-lg inline-block ${isDark ? 'bg-green-900 border-2 border-green-600' : 'bg-green-100 border-2 border-green-500'}`}>
+              <p className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-green-200' : 'text-green-800'}`}>
+                ✅ Auto-filled from approved suggestion
+              </p>
+            </div>
           )}
         </div>
         <button
           type="button"
           onClick={() => setShowAiHelper(!showAiHelper)}
-          className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 justify-center"
+          className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-4 py-2 sm:py-3 rounded-lg font-semibold transition-all flex items-center gap-2 justify-center text-sm"
         >
-          <i className="fas fa-magic"></i> AI Helper
+          <i className="fas fa-magic"></i> <span>AI Helper</span>
         </button>
       </div>
 
