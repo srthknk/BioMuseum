@@ -765,7 +765,7 @@ async def verify_suggestion_ai(suggestion_id: str, _: bool = Depends(verify_admi
             raise HTTPException(status_code=503, detail="AI service not available")
         
         # Use Gemini to verify organism
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         verification_prompt = f"""
         Is "{suggestion['organism_name']}" a real organism/animal/plant species that exists in nature?
         
