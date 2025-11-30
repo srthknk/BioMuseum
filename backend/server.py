@@ -281,6 +281,59 @@ def verify_admin_token(credentials: HTTPAuthorizationCredentials = Depends(secur
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+# Async function to fetch images from web
+async def get_images_from_web_async(organism_name: str, max_images: int = 5) -> List[str]:
+    """
+    Fetch images of an organism from Bing Image Search
+    Returns list of base64 encoded images
+    """
+    try:
+        images = []
+        search_url = f"https://www.bing.com/images/search?q={organism_name}&qft=+filterui:imagesize-large"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        # Try to fetch from Wikimedia Commons API first (more reliable)
+        try:
+            wiki_url = f"https://commons.wikimedia.org/w/api.php?action=query&list=allimages&aisort=timestamp&aidir=descending&aifrom={organism_name}&ailimit=10&format=json"
+            response = requests.get(wiki_url, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'query' in data and 'allimages' in data['query']:
+                    for img in data['query']['allimages'][:max_images]:
+                        if 'url' in img:
+                            img_url = img['url']
+                            # Download and convert to base64
+                            try:
+                                img_response = requests.get(img_url, headers=headers, timeout=10)
+                                if img_response.status_code == 200:
+                                    base64_img = base64.b64encode(img_response.content).decode('utf-8')
+                                    images.append(f"data:image/jpeg;base64,{base64_img}")
+                            except Exception as e:
+                                logging.warning(f"Could not fetch image {img_url}: {e}")
+                                continue
+        except Exception as e:
+            logging.warning(f"Wikimedia API error: {e}")
+        
+        # If we don't have enough images, try a simple placeholder approach
+        if len(images) < max_images:
+            # Create placeholder images with organism name
+            for i in range(max_images - len(images)):
+                # Create a simple colored placeholder
+                colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8']
+                color = colors[i % len(colors)]
+                # Return a simple placeholder (you could use a real image generation service here)
+                images.append(f"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect width='300' height='300' fill='{color}'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='white'{organism_name[:20]}</text>%3E%3C/svg%3E")
+        
+        return images[:max_images]
+        
+    except Exception as e:
+        logging.warning(f"Error fetching images for {organism_name}: {e}")
+        return []
+
 # Root endpoint for health checks and load balancers
 @app.get("/")
 async def root_health():
@@ -811,6 +864,129 @@ async def verify_suggestion_ai(suggestion_id: str, _: bool = Depends(verify_admi
         raise
     except Exception as e:
         logging.error(f"Error verifying suggestion: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Approve suggestion and generate complete organism data (admin only)
+@api_router.post("/admin/suggestions/{suggestion_id}/approve")
+async def approve_suggestion_and_generate(suggestion_id: str, _: bool = Depends(verify_admin_token)):
+    try:
+        suggestion = await suggestions_collection.find_one({"id": suggestion_id})
+        if not suggestion:
+            raise HTTPException(status_code=404, detail="Suggestion not found")
+        
+        if not HAS_GENAI or not GEMINI_API_KEY:
+            raise HTTPException(status_code=503, detail="AI service not available")
+        
+        organism_name = suggestion['organism_name']
+        
+        # Generate complete organism data using the AI endpoint
+        prompt = f"""You are an expert biologist and zoologist. I need you to provide detailed biological information about "{organism_name}".
+
+Please provide the information in JSON format ONLY (no markdown, no explanations). Return ONLY valid JSON:
+
+{{
+    "name": "Common name of the organism",
+    "scientific_name": "Scientific name (binomial nomenclature)",
+    "classification": {{
+        "kingdom": "Kingdom",
+        "phylum": "Phylum",
+        "class": "Class",
+        "order": "Order",
+        "family": "Family",
+        "genus": "Genus",
+        "species": "Species"
+    }},
+    "morphology": "Physical description including size, color, distinctive features (2-3 sentences)",
+    "physiology": "How the organism functions, internal systems, key biological processes (2-3 sentences)",
+    "description": "General overview of the organism, its habitat, and interesting facts (3-4 sentences)"
+}}
+
+Be accurate and scientific. If you cannot find specific information, make reasonable educated guesses based on the organism's taxonomy.
+Make sure the JSON is valid and properly formatted."""
+
+        # Call Gemini API to generate organism data
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        response = model.generate_content(prompt)
+        
+        # Parse the response
+        response_text = response.text.strip()
+        
+        # Remove markdown code blocks if present
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.startswith('```'):
+            response_text = response_text[3:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+        
+        response_text = response_text.strip()
+        
+        # Parse JSON
+        organism_data = json.loads(response_text)
+        
+        # Now generate images using the get_images_from_web function
+        images = []
+        try:
+            search_terms = [
+                organism_data.get('name', organism_name),
+                organism_data.get('scientific_name', ''),
+                organism_name
+            ]
+            
+            for search_term in search_terms:
+                if search_term:
+                    images = await get_images_from_web_async(search_term, max_images=5)
+                    if images:
+                        break
+        except Exception as e:
+            logging.warning(f"Could not fetch images: {e}")
+            images = []
+        
+        # Update suggestion status to approved
+        await suggestions_collection.update_one(
+            {"id": suggestion_id},
+            {
+                "$set": {
+                    "status": "approved",
+                    "updated_at": datetime.utcnow().isoformat(),
+                    "ai_verification": {
+                        "is_authentic": True,
+                        "reason": "Admin approved and generated complete data"
+                    }
+                }
+            }
+        )
+        
+        # Return organism data with images ready for auto-fill
+        return {
+            "success": True,
+            "organism_data": {
+                "name": organism_data.get('name', organism_name),
+                "scientific_name": organism_data.get('scientific_name', ''),
+                "classification": organism_data.get('classification', {
+                    "kingdom": "",
+                    "phylum": "",
+                    "class": "",
+                    "order": "",
+                    "family": "",
+                    "genus": "",
+                    "species": ""
+                }),
+                "morphology": organism_data.get('morphology', ''),
+                "physiology": organism_data.get('physiology', ''),
+                "description": organism_data.get('description', ''),
+                "images": images
+            },
+            "suggestion_id": suggestion_id,
+            "message": "Suggestion approved and organism data generated successfully"
+        }
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON parsing error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse AI response: {str(e)}")
+    except Exception as e:
+        logging.error(f"Error approving suggestion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Delete suggestion (admin only)
