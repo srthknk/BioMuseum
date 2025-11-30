@@ -739,6 +739,14 @@ const AdminPanel = () => {
             >
               💡 Suggested Organisms
             </button>
+            <button
+              onClick={() => setActiveView('users')}
+              className={`px-6 py-4 font-semibold transition-all ${activeView === 'users' 
+                ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
+                : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
+            >
+              👥 Users History
+            </button>
           </div>
 
           {/* Mobile Menu */}
@@ -767,6 +775,12 @@ const AdminPanel = () => {
                 className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'suggestions' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
               >
                 💡 Suggested Organisms
+              </button>
+              <button
+                onClick={() => { setActiveView('users'); setMobileMenuOpen(false); }}
+                className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'users' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
+              >
+                👥 Users History
               </button>
               <button
                 onClick={() => { navigate('/'); setMobileMenuOpen(false); }}
@@ -805,6 +819,12 @@ const AdminPanel = () => {
         )}
         {activeView === 'suggestions' && (
           <SuggestedOrganismsTab 
+            token={token}
+            isDark={isDark}
+          />
+        )}
+        {activeView === 'users' && (
+          <UsersHistoryTab 
             token={token}
             isDark={isDark}
           />
@@ -1955,6 +1975,134 @@ const PrintOrganismModal = ({ organism, isDark, onClose }) => {
           </button>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Users History Tab Component
+const UsersHistoryTab = ({ token, isDark }) => {
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSuggestions();
+  }, []);
+
+  const fetchSuggestions = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/suggestions`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Sort by date descending (newest first)
+      const sorted = response.data.sort((a, b) => 
+        new Date(b.created_at) - new Date(a.created_at)
+      );
+      setSuggestions(sorted);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      setSuggestions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const colors = {
+      pending: isDark ? 'bg-yellow-900 text-yellow-200' : 'bg-yellow-100 text-yellow-800',
+      approved: isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800',
+      rejected: isDark ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800'
+    };
+    return colors[status] || colors.pending;
+  };
+
+  return (
+    <div>
+      <h2 className={`text-2xl sm:text-3xl font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-800'}`}>👥 Users Suggestion History</h2>
+      
+      {loading ? (
+        <div className={`text-center py-8 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+          <p className="text-lg">Loading suggestions...</p>
+        </div>
+      ) : suggestions.length === 0 ? (
+        <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+          <p className={`text-lg font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>No suggestions yet</p>
+          <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Suggestions from users will appear here</p>
+        </div>
+      ) : (
+        <div className={`overflow-x-auto rounded-lg border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <table className="w-full">
+            <thead>
+              <tr className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>User Name</th>
+                <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Organism</th>
+                <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Description</th>
+                <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Date</th>
+                <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {suggestions.map((suggestion, index) => (
+                <tr key={suggestion.id} className={`border-t ${isDark ? 'border-gray-700 hover:bg-gray-800' : 'border-gray-200 hover:bg-gray-50'} transition-colors`}>
+                  <td className={`px-4 sm:px-6 py-4 text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {suggestion.user_name}
+                  </td>
+                  <td className={`px-4 sm:px-6 py-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <span className="font-semibold">🦁 {suggestion.organism_name}</span>
+                  </td>
+                  <td className={`px-4 sm:px-6 py-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} max-w-xs truncate`}>
+                    {suggestion.description || '—'}
+                  </td>
+                  <td className={`px-4 sm:px-6 py-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} whitespace-nowrap`}>
+                    {formatDate(suggestion.created_at)}
+                  </td>
+                  <td className={`px-4 sm:px-6 py-4 text-sm`}>
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(suggestion.status)}`}>
+                      {suggestion.status.charAt(0).toUpperCase() + suggestion.status.slice(1)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Statistics Section */}
+      {suggestions.length > 0 && (
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-blue-50'}`}>
+            <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Total Suggestions</p>
+            <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{suggestions.length}</p>
+          </div>
+          <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-green-50'}`}>
+            <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Approved</p>
+            <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+              {suggestions.filter(s => s.status === 'approved').length}
+            </p>
+          </div>
+          <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-yellow-50'}`}>
+            <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Pending</p>
+            <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
+              {suggestions.filter(s => s.status === 'pending').length}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
