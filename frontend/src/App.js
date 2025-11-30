@@ -32,6 +32,12 @@ const API = `${BACKEND_URL}/api`;
 // Configure axios with longer timeout
 axios.defaults.timeout = 30000; // 30 seconds for long operations
 
+// Utility function to capitalize first letter of organism name
+const capitalizeOrganismName = (name) => {
+  if (!name) return '';
+  return name.charAt(0).toUpperCase() + name.slice(1);
+};
+
 // Theme Context
 const ThemeContext = React.createContext();
 
@@ -536,7 +542,7 @@ const OrganismDetail = () => {
         <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white'} rounded-xl shadow-lg overflow-hidden border`}>
           {/* Header */}
           <div className={`${isDark ? 'bg-gradient-to-br from-green-800 to-green-900' : 'bg-gradient-to-br from-green-600 to-blue-600'} text-white p-4 sm:p-6`}>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">{organism.name}</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">{capitalizeOrganismName(organism.name)}</h1>
             <p className="text-lg sm:text-xl italic opacity-90">{organism.scientific_name}</p>
           </div>
 
@@ -1024,7 +1030,7 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
                   🔬 Organism Name:
                 </p>
                 <p className={`text-sm sm:text-base font-semibold ${isDark ? 'text-green-400' : 'text-green-700'}`}>
-                  {suggestion.organism_name}
+                  {capitalizeOrganismName(suggestion.organism_name)}
                 </p>
               </div>
             </div>
@@ -1128,7 +1134,7 @@ const DashboardView = ({ organisms, isDark }) => {
           {organisms.slice(0, 5).map((organism) => (
             <div key={organism.id} className={`flex items-center justify-between p-3 sm:p-4 rounded-lg transition-all ${isDark ? 'bg-gray-800 border border-gray-700 hover:border-purple-500' : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'}`}>
               <div className="flex-1 min-w-0">
-                <h4 className={`font-semibold truncate ${isDark ? 'text-white' : 'text-gray-800'}`}>{organism.name}</h4>
+                <h4 className={`font-semibold truncate ${isDark ? 'text-white' : 'text-gray-800'}`}>{capitalizeOrganismName(organism.name)}</h4>
                 <p className={`text-xs sm:text-sm italic truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{organism.scientific_name}</p>
               </div>
               <span className={`text-xs sm:text-sm ml-2 whitespace-nowrap ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -1676,12 +1682,30 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
   const [formData, setFormData] = useState({
     user_name: '',
     organism_name: '',
-    description: ''
+    description: '',
+    educational_level: ''
   });
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+
+  const educationalLevels = [
+    { value: '11th', label: '11th Standard' },
+    { value: '12th', label: '12th Standard' },
+    { value: 'B.Sc 1st Year', label: 'B.Sc 1st Year' },
+    { value: 'B.Sc 2nd Year', label: 'B.Sc 2nd Year' },
+    { value: 'B.Sc 3rd Year', label: 'B.Sc 3rd Year' },
+    { value: 'B.Sc 4th Year', label: 'B.Sc 4th Year' },
+    { value: 'BCS', label: 'BCS (Computer Science)' },
+    { value: 'BCA', label: 'BCA (Computer Applications)' },
+    { value: 'B.Voc', label: 'B.Voc (Vocational)' },
+    { value: 'M.Sc', label: 'M.Sc (Masters)' },
+    { value: 'PhD', label: 'PhD / Research' },
+    { value: 'Teacher', label: ' Teacher / Educator' },
+    { value: 'Professional', label: 'Professional' },
+    { value: 'Other', label: 'Other' }
+  ];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -1692,8 +1716,8 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.user_name.trim() || !formData.organism_name.trim()) {
-      setErrorMessage('Please fill in all required fields');
+    if (!formData.user_name.trim() || !formData.organism_name.trim() || !formData.educational_level.trim()) {
+      setErrorMessage('Please fill in all required fields (Name, Organism, and Class/Standard)');
       return;
     }
 
@@ -1707,7 +1731,7 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
       if (response.status === 201 || response.status === 200) {
         setSuccessMessage(`✅ Thank you ${formData.user_name}! Your suggestion for "${formData.organism_name}" has been submitted successfully!`);
         setShowSuccess(true);
-        setFormData({ user_name: '', organism_name: '', description: '' });
+        setFormData({ user_name: '', organism_name: '', description: '', educational_level: '' });
         
         // Auto-close after 4 seconds
         setTimeout(() => {
@@ -1837,6 +1861,31 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
               <p className={`text-xs sm:text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 {formData.description.length}/500 characters
               </p>
+            </div>
+
+            {/* Educational Level Field */}
+            <div>
+              <label className={`block text-sm sm:text-base font-semibold mb-2 sm:mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                🎓 Your Class/Standard <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="educational_level"
+                value={formData.educational_level}
+                onChange={handleChange}
+                required
+                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border-2 transition-all text-sm sm:text-base ${
+                  isDark 
+                    ? 'bg-gray-800 border-gray-700 text-white focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-30' 
+                    : 'bg-white border-gray-300 text-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-30'
+                } focus:outline-none`}
+              >
+                <option value="">-- Select your class/standard --</option>
+                {educationalLevels.map((level) => (
+                  <option key={level.value} value={level.value}>
+                    {level.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Info Box */}
@@ -2150,7 +2199,7 @@ const UsersHistoryTab = ({ token, isDark }) => {
                     {suggestion.user_name}
                   </td>
                   <td className={`px-4 sm:px-6 py-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    <span className="font-semibold">🦁 {suggestion.organism_name}</span>
+                    <span className="font-semibold">🦁 {capitalizeOrganismName(suggestion.organism_name)}</span>
                   </td>
                   <td className={`px-4 sm:px-6 py-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} max-w-xs truncate`}>
                     {suggestion.description || '—'}

@@ -203,6 +203,7 @@ class Suggestion(BaseModel):
     user_name: str
     organism_name: str
     description: Optional[str] = ""
+    educational_level: str  # 11th, 12th, B.Sc 1st, B.Sc 2nd, B.Sc 3rd, B.Sc 4th, BCS, BCA, B.Voc, Teacher, etc.
     status: str = "pending"  # pending, approved, rejected
     ai_verification: Optional[dict] = None
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
@@ -212,6 +213,7 @@ class SuggestionCreate(BaseModel):
     user_name: str
     organism_name: str
     description: Optional[str] = ""
+    educational_level: str  # Required field
 
 # Database functions - MongoDB only (no JSON fallback)
 async def get_organisms_list():
