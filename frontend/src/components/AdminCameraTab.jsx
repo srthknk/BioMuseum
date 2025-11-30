@@ -24,15 +24,22 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
     // First, set camera to active so video element renders
     setCameraActive(true);
     
-    // Wait a tick for DOM to update with video element
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait longer for DOM to fully update with video element
+    await new Promise(resolve => setTimeout(resolve, 200));
     
     try {
       console.log('📸 Starting camera...');
       
-      // Now check if videoRef exists
-      if (!videoRef.current) {
-        console.error('Video element still not found after DOM update!');
+      // Check multiple times if videoRef is available
+      let videoElement = videoRef.current;
+      if (!videoElement) {
+        console.warn('Video ref not available, waiting longer...');
+        await new Promise(resolve => setTimeout(resolve, 200));
+        videoElement = videoRef.current;
+      }
+      
+      if (!videoElement) {
+        console.error('Video element still not found!');
         setError('Camera element initialization failed. Please try again.');
         setCameraActive(false);
         return;
@@ -54,17 +61,19 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
       setStream(mediaStream);
       
       // Assign stream to video element
-      videoRef.current.srcObject = mediaStream;
-      
-      // Wait a tick, then play
-      setTimeout(() => {
-        if (videoRef.current) {
-          console.log('Attempting to play video...');
-          videoRef.current.play()
-            .then(() => console.log('✅ Video playing'))
-            .catch(error => console.error('❌ Play failed:', error));
-        }
-      }, 50);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+        
+        // Wait a tick, then play
+        setTimeout(() => {
+          if (videoRef.current) {
+            console.log('Attempting to play video...');
+            videoRef.current.play()
+              .then(() => console.log('✅ Video playing'))
+              .catch(error => console.error('❌ Play failed:', error));
+          }
+        }, 50);
+      }
       
       setCameraPermission('granted');
       console.log('✅ Camera started successfully');
