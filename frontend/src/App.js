@@ -731,6 +731,14 @@ const AdminPanel = () => {
             >
               📝 Manage Organisms
             </button>
+            <button
+              onClick={() => setActiveView('suggestions')}
+              className={`px-6 py-4 font-semibold transition-all ${activeView === 'suggestions' 
+                ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
+                : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
+            >
+              💡 Suggested Organisms
+            </button>
           </div>
 
           {/* Mobile Menu */}
@@ -753,6 +761,12 @@ const AdminPanel = () => {
                 className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'manage' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
               >
                 📝 Manage Organisms
+              </button>
+              <button
+                onClick={() => { setActiveView('suggestions'); setMobileMenuOpen(false); }}
+                className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'suggestions' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
+              >
+                💡 Suggested Organisms
               </button>
               <button
                 onClick={() => { navigate('/'); setMobileMenuOpen(false); }}
@@ -789,12 +803,234 @@ const AdminPanel = () => {
             onEdit={setEditingOrganism}
           />
         )}
+        {activeView === 'suggestions' && (
+          <SuggestedOrganismsTab 
+            token={token}
+            isDark={isDark}
+          />
+        )}
       </main>
     </div>
   );
 };
 
-// Dashboard View Component
+// Suggested Organisms Tab Component
+const SuggestedOrganismsTab = ({ token, isDark }) => {
+  const [suggestions, setSuggestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [verifyingId, setVerifyingId] = useState(null);
+
+  useEffect(() => {
+    fetchSuggestions();
+  }, []);
+
+  const fetchSuggestions = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API}/admin/suggestions/pending`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSuggestions(response.data || []);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      alert('Error loading suggestions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyWithAI = async (suggestionId) => {
+    setVerifyingId(suggestionId);
+    try {
+      const response = await axios.post(
+        `${API}/admin/suggestions/${suggestionId}/verify`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Update the suggestion with verification result
+      setSuggestions(prev => prev.map(sugg => 
+        sugg.id === suggestionId 
+          ? { ...sugg, ai_verification: response.data }
+          : sugg
+      ));
+      
+      alert('✅ Verification completed! Check the results.');
+    } catch (error) {
+      alert('Error verifying suggestion: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  const handleApprove = async (suggestionId) => {
+    try {
+      await axios.put(
+        `${API}/admin/suggestions/${suggestionId}/status`,
+        null,
+        { 
+          params: { status: 'approved' },
+          headers: { Authorization: `Bearer ${token}` } 
+        }
+      );
+      
+      setSuggestions(prev => prev.filter(sugg => sugg.id !== suggestionId));
+      alert('✅ Suggestion approved!');
+    } catch (error) {
+      alert('Error approving suggestion: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleReject = async (suggestionId) => {
+    if (window.confirm('Are you sure you want to reject this suggestion?')) {
+      try {
+        await axios.put(
+          `${API}/admin/suggestions/${suggestionId}/status`,
+          null,
+          { 
+            params: { status: 'rejected' },
+            headers: { Authorization: `Bearer ${token}` } 
+          }
+        );
+        
+        setSuggestions(prev => prev.filter(sugg => sugg.id !== suggestionId));
+        alert('❌ Suggestion rejected!');
+      } catch (error) {
+        alert('Error rejecting suggestion: ' + (error.response?.data?.detail || error.message));
+      }
+    }
+  };
+
+  const handleDelete = async (suggestionId) => {
+    if (window.confirm('Are you sure you want to delete this suggestion?')) {
+      try {
+        await axios.delete(
+          `${API}/admin/suggestions/${suggestionId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        setSuggestions(prev => prev.filter(sugg => sugg.id !== suggestionId));
+        alert('✅ Suggestion deleted!');
+      } catch (error) {
+        alert('Error deleting suggestion: ' + (error.response?.data?.detail || error.message));
+      }
+    }
+  };
+
+  return (
+    <div>
+      <h2 className={`text-2xl sm:text-3xl font-semibold mb-6 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+        💡 Suggested Organisms
+      </h2>
+
+      {loading && (
+        <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>⏳ Loading suggestions...</p>
+        </div>
+      )}
+
+      {!loading && suggestions.length === 0 && (
+        <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
+          <p className={`text-lg font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>No pending suggestions</p>
+          <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Users will see their suggestions here once submitted.</p>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {suggestions.map((suggestion) => (
+          <div 
+            key={suggestion.id} 
+            className={`rounded-lg p-4 sm:p-6 transition-all ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200 shadow-md'}`}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  👤 Suggested By:
+                </p>
+                <p className={`text-sm sm:text-base font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                  {suggestion.user_name}
+                </p>
+              </div>
+              <div>
+                <p className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  🔬 Organism Name:
+                </p>
+                <p className={`text-sm sm:text-base font-semibold ${isDark ? 'text-green-400' : 'text-green-700'}`}>
+                  {suggestion.organism_name}
+                </p>
+              </div>
+            </div>
+
+            {suggestion.description && (
+              <div className="mb-4">
+                <p className={`text-xs sm:text-sm font-semibold mb-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  📝 Description:
+                </p>
+                <p className={`text-xs sm:text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  {suggestion.description}
+                </p>
+              </div>
+            )}
+
+            {suggestion.ai_verification && (
+              <div className={`mb-4 p-3 sm:p-4 rounded-lg border-2 ${
+                suggestion.ai_verification.is_authentic 
+                  ? isDark ? 'bg-green-900 border-green-600 text-green-100' : 'bg-green-50 border-green-300 text-green-800'
+                  : isDark ? 'bg-red-900 border-red-600 text-red-100' : 'bg-red-50 border-red-300 text-red-800'
+              }`}>
+                <p className="font-semibold text-xs sm:text-sm mb-1">
+                  {suggestion.ai_verification.is_authentic ? '✅ Authentic!' : '❌ Not Authentic'}
+                </p>
+                <p className="text-xs sm:text-sm">{suggestion.ai_verification.reason}</p>
+                {suggestion.ai_verification.is_authentic && (
+                  <div className="mt-2 text-xs sm:text-sm">
+                    <p><span className="font-semibold">Type:</span> {suggestion.ai_verification.type}</p>
+                    <p><span className="font-semibold">Scientific:</span> {suggestion.ai_verification.scientific_name}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-wrap">
+              {!suggestion.ai_verification && (
+                <button
+                  onClick={() => handleVerifyWithAI(suggestion.id)}
+                  disabled={verifyingId === suggestion.id}
+                  className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm transition-all"
+                >
+                  {verifyingId === suggestion.id ? '⏳ Verifying...' : '🤖 Verify with AI'}
+                </button>
+              )}
+              
+              {suggestion.ai_verification?.is_authentic && (
+                <button
+                  onClick={() => handleApprove(suggestion.id)}
+                  className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm transition-all"
+                >
+                  ✅ Approve
+                </button>
+              )}
+              
+              <button
+                onClick={() => handleReject(suggestion.id)}
+                className="flex-1 sm:flex-none bg-yellow-600 hover:bg-yellow-700 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm transition-all"
+              >
+                ⚠️ Reject
+              </button>
+              
+              <button
+                onClick={() => handleDelete(suggestion.id)}
+                className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm transition-all"
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 const DashboardView = ({ organisms, isDark }) => {
   return (
     <div>
@@ -1335,144 +1571,206 @@ const SuggestionModal = ({ isDark, onClose, token }) => {
     description: ''
   });
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setErrorMessage(''); // Clear error when user starts typing
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.user_name.trim() || !formData.organism_name.trim()) {
-      setMessage('Please fill in all required fields');
+      setErrorMessage('Please fill in all required fields');
       return;
     }
 
     setLoading(true);
-    setMessage('');
+    setErrorMessage('');
+    setSuccessMessage('');
 
     try {
       const response = await axios.post(`${API}/suggestions`, formData);
       
-      if (response.status === 201) {
-        setMessage('✅ Thank you for your suggestion! Our admins will review it soon.');
+      if (response.status === 201 || response.status === 200) {
+        setSuccessMessage(`✅ Thank you ${formData.user_name}! Your suggestion for "${formData.organism_name}" has been submitted successfully!`);
+        setShowSuccess(true);
+        setFormData({ user_name: '', organism_name: '', description: '' });
+        
+        // Auto-close after 4 seconds
         setTimeout(() => {
-          setFormData({ user_name: '', organism_name: '', description: '' });
           onClose();
-        }, 2000);
+        }, 4000);
       }
     } catch (error) {
-      setMessage('❌ Error submitting suggestion: ' + (error.response?.data?.detail || error.message));
+      setErrorMessage('❌ Error: ' + (error.response?.data?.detail || error.message));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto`}>
-      <div className={`${isDark ? 'bg-gray-900' : 'bg-white'} rounded-lg p-5 sm:p-8 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl my-auto`}>
-        <div className="flex justify-between items-center mb-4 sm:mb-6">
-          <h3 className={`text-xl sm:text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
-            🦁 Suggest Organism
-          </h3>
+    <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto`}>
+      <div className={`${isDark ? 'bg-gray-900' : 'bg-white'} rounded-xl p-4 sm:p-8 w-full max-w-2xl max-h-[95vh] overflow-y-auto shadow-2xl my-auto border-t-4 ${isDark ? 'border-green-600' : 'border-green-500'}`}>
+        <div className="flex justify-between items-start gap-3 mb-5 sm:mb-8">
+          <div>
+            <h3 className={`text-2xl sm:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+              🦁 Suggest an Organism
+            </h3>
+            <p className={`text-xs sm:text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Help us discover new species for our museum!
+            </p>
+          </div>
           <button
             onClick={onClose}
-            className={`text-2xl ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
+            className={`text-2xl sm:text-3xl transition-all ${isDark ? 'text-gray-400 hover:text-red-400' : 'text-gray-600 hover:text-red-600'}`}
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Your Name *
-            </label>
-            <input
-              type="text"
-              name="user_name"
-              value={formData.user_name}
-              onChange={handleChange}
-              placeholder="Enter your name"
-              className={`w-full px-4 py-2.5 rounded-lg border-2 transition-all ${
-                isDark 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-green-500' 
-                  : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-green-500'
-              } focus:outline-none`}
-              required
-            />
-          </div>
-
-          <div>
-            <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Organism/Animal Name *
-            </label>
-            <input
-              type="text"
-              name="organism_name"
-              value={formData.organism_name}
-              onChange={handleChange}
-              placeholder="e.g., Bengal Tiger, Blue Whale"
-              className={`w-full px-4 py-2.5 rounded-lg border-2 transition-all ${
-                isDark 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-green-500' 
-                  : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-green-500'
-              } focus:outline-none`}
-              required
-            />
-          </div>
-
-          <div>
-            <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Description (Optional)
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Tell us why this organism should be in our museum..."
-              rows="3"
-              className={`w-full px-4 py-2.5 rounded-lg border-2 transition-all resize-none ${
-                isDark 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-green-500' 
-                  : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-green-500'
-              } focus:outline-none`}
-            />
-          </div>
-
-          {message && (
-            <div className={`p-3 rounded-lg text-sm font-medium ${
-              message.includes('✅')
-                ? isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'
-                : isDark ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800'
-            }`}>
-              {message}
+        {/* Success Message */}
+        {showSuccess && (
+          <div className={`mb-6 p-4 sm:p-6 rounded-lg border-2 ${isDark ? 'bg-green-900 border-green-600 text-green-100' : 'bg-green-50 border-green-300 text-green-800'}`}>
+            <div className="flex items-start gap-3 sm:gap-4">
+              <span className="text-2xl sm:text-3xl">🎉</span>
+              <div>
+                <h4 className="font-bold text-sm sm:text-base mb-1">Suggestion Submitted Successfully!</h4>
+                <p className="text-xs sm:text-sm leading-relaxed">
+                  {successMessage}
+                </p>
+                <p className={`text-xs mt-2 ${isDark ? 'text-green-300' : 'text-green-700'}`}>
+                  Our team will review and verify your suggestion shortly. Thank you for contributing!
+                </p>
+              </div>
             </div>
-          )}
-
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2.5 rounded-lg font-medium transition-all"
-            >
-              {loading ? '⏳ Submitting...' : '📤 Submit Suggestion'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
-                isDark 
-                  ? 'bg-gray-700 hover:bg-gray-600 text-white' 
-                  : 'bg-gray-300 hover:bg-gray-400 text-gray-800'
-              }`}
-            >
-              Cancel
-            </button>
           </div>
-        </form>
+        )}
+
+        {!showSuccess && (
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            {/* Error Message */}
+            {errorMessage && (
+              <div className={`p-3 sm:p-4 rounded-lg border-2 ${isDark ? 'bg-red-900 border-red-600 text-red-100' : 'bg-red-50 border-red-300 text-red-800'}`}>
+                <div className="flex items-start gap-2">
+                  <span>⚠️</span>
+                  <p className="text-xs sm:text-sm font-medium">{errorMessage}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Your Name Field */}
+            <div>
+              <label className={`block text-sm sm:text-base font-semibold mb-2 sm:mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                👤 Your Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="user_name"
+                value={formData.user_name}
+                onChange={handleChange}
+                placeholder="e.g., John Doe"
+                maxLength="100"
+                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border-2 transition-all text-sm sm:text-base ${
+                  isDark 
+                    ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-30' 
+                    : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-30'
+                } focus:outline-none`}
+                required
+              />
+            </div>
+
+            {/* Organism Name Field */}
+            <div>
+              <label className={`block text-sm sm:text-base font-semibold mb-2 sm:mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                🔬 Organism/Animal Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="organism_name"
+                value={formData.organism_name}
+                onChange={handleChange}
+                placeholder="e.g., Bengal Tiger, Blue Whale, Red Panda"
+                maxLength="150"
+                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border-2 transition-all text-sm sm:text-base ${
+                  isDark 
+                    ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-30' 
+                    : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-30'
+                } focus:outline-none`}
+                required
+              />
+              <p className={`text-xs sm:text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {formData.organism_name.length}/150 characters
+              </p>
+            </div>
+
+            {/* Description Field */}
+            <div>
+              <label className={`block text-sm sm:text-base font-semibold mb-2 sm:mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                📝 Why This Organism? (Optional)
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Tell us interesting facts about this organism, where it's found, why it should be in our museum..."
+                rows="4"
+                maxLength="500"
+                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg border-2 transition-all resize-none text-sm sm:text-base ${
+                  isDark 
+                    ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-30' 
+                    : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-green-500 focus:ring-2 focus:ring-green-500 focus:ring-opacity-30'
+                } focus:outline-none`}
+              />
+              <p className={`text-xs sm:text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {formData.description.length}/500 characters
+              </p>
+            </div>
+
+            {/* Info Box */}
+            <div className={`p-3 sm:p-4 rounded-lg ${isDark ? 'bg-blue-900 text-blue-100' : 'bg-blue-50 text-blue-800'}`}>
+              <p className="text-xs sm:text-sm flex items-start gap-2">
+                <span>ℹ️</span>
+                <span>Our Intelligence will verify that your suggestion is a real organism. Make sure you suggest authentic species!</span>
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 sm:pt-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 order-2 sm:order-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed active:bg-green-800 text-white px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold transition-all text-sm sm:text-base"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span>⏳</span> Submitting...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <span>📤</span> Submit Suggestion
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className={`flex-1 order-1 sm:order-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold transition-all text-sm sm:text-base ${
+                  isDark 
+                    ? 'bg-gray-700 hover:bg-gray-600 active:bg-gray-500 text-white disabled:bg-gray-800 disabled:cursor-not-allowed' 
+                    : 'bg-gray-300 hover:bg-gray-400 active:bg-gray-500 text-gray-800 disabled:bg-gray-200 disabled:cursor-not-allowed'
+                }`}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
