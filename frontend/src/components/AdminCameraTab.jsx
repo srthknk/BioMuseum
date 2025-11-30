@@ -1,126 +1,16 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 
 const API = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
-  const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const [cameraActive, setCameraActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [identificationResult, setIdentificationResult] = useState(null);
   const [error, setError] = useState(null);
-  const [stream, setStream] = useState(null);
-  const [cameraPermission, setCameraPermission] = useState('pending'); // pending, granted, denied
-  const [facingMode, setFacingMode] = useState('environment'); // 'environment' (back) or 'user' (front)
-
-  // Stop camera (wrapped in useCallback to prevent infinite deps issues)
-  const stopCamera = useCallback(() => {
-    console.log('Stopping camera...');
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    setCameraActive(false);
-    console.log('✅ Camera stopped');
-  }, [stream]);
-
-  // Helper to wait for video element to be in DOM
-  const waitForVideoElement = async (maxAttempts = 30) => {
-    let attempts = 0;
-    while (attempts < maxAttempts) {
-      if (videoRef.current) {
-        console.log(`✅ Video element found on attempt ${attempts + 1}`);
-        return true;
-      }
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-      console.log(`Waiting for video element... (${attempts}/${maxAttempts})`);
-    }
-    return false;
-  };
-
-  // Request camera access (wrapped in useCallback)
-  const startCamera = useCallback(async () => {
-    setError(null);
-    setCameraActive(true);
-    
-    try {
-      console.log('📸 Starting camera - waiting for video element...');
-      
-      // Wait for the video element to actually be rendered
-      const videoElementReady = await waitForVideoElement(30);
-      
-      if (!videoElementReady) {
-        console.error('❌ Video element never appeared');
-        setError('Camera element not ready. Please refresh and try again.');
-        setCameraActive(false);
-        return;
-      }
-
-      const constraints = {
-        video: { 
-          facingMode: facingMode,
-          width: { ideal: 1280 }, 
-          height: { ideal: 720 }
-        },
-        audio: false
-      };
-
-      console.log('Requesting getUserMedia...');
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      console.log('✅ Media stream obtained, assigning to video...');
-      setStream(mediaStream);
-      
-      // Assign stream to video element
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        
-        // Play the video
-        setTimeout(() => {
-          if (videoRef.current) {
-            videoRef.current.play()
-              .then(() => console.log('✅ Video playing'))
-              .catch(error => console.error('❌ Play failed:', error));
-          }
-        }, 50);
-      }
-      
-      setCameraPermission('granted');
-      console.log('✅ Camera started successfully');
-      
-    } catch (err) {
-      setCameraActive(false);
-      setCameraPermission('denied');
-      console.error('❌ Camera error:', err.name, err.message);
-      
-      if (err.name === 'NotAllowedError') {
-        setError('Camera permission denied. Please enable camera in browser settings.');
-      } else if (err.name === 'NotFoundError') {
-        setError('No camera found on this device.');
-      } else if (err.name === 'NotReadableError') {
-        setError('Camera is already in use by another application.');
-      } else {
-        setError('Cannot access camera: ' + err.message);
-      }
-    }
-  }, [facingMode]);
-
-  // Flip camera between front and back
-  const flipCamera = async () => {
-    stopCamera();
-    // Wait a moment for the camera to fully stop
-    await new Promise(resolve => setTimeout(resolve, 300));
-    // Toggle facing mode and restart
-    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
-  };
 
   // Capture image from video
   const captureImage = () => {
@@ -228,13 +118,13 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
   return (
     <div className={`max-w-4xl mx-auto ${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-4 sm:p-6`}>
       <h1 className={`text-2xl sm:text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
-        📸 Identify Organism by Camera
+        📸 Identify Organism by Photo
       </h1>
       <p className={`mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-        Take a photo of an organism to identify it automatically using AI
+        Upload a photo of an organism to identify it automatically using AI
       </p>
 
-      {/* Step 1: Camera Capture */}
+      {/* Photo Upload */}
       {!capturedImage ? (
         <div className="space-y-4">
           {error && (
@@ -243,76 +133,21 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
             </div>
           )}
 
-          {!cameraActive ? (
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                onClick={startCamera}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
-              >
-                <i className="fas fa-camera"></i> Start Camera
-              </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
-              >
-                <i className="fas fa-image"></i> Upload Photo
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Video Preview - Responsive sizing */}
-              <div className="relative bg-black rounded-lg overflow-hidden" style={{ 
-                aspectRatio: '16/9',
-              }}>
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{ 
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    backgroundColor: '#000',
-                  }}
-                />
-                {/* Flip Camera Button - Top Right */}
-                <button
-                  onClick={flipCamera}
-                  className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg transition flex items-center gap-2 shadow-lg"
-                  title="Flip camera"
-                >
-                  <i className="fas fa-sync-alt"></i> <span className="hidden sm:inline">Flip</span>
-                </button>
-              </div>
-
-              {/* Capture Buttons - Responsive layout */}
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <button
-                  onClick={captureImage}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                >
-                  <i className="fas fa-check-circle"></i> Capture Photo
-                </button>
-                <button
-                  onClick={() => stopCamera()}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
-                >
-                  <i className="fas fa-times-circle"></i> Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Hidden Canvas for image capture */}
-          <canvas ref={canvasRef} className="hidden" />
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition flex items-center justify-center gap-2"
+            >
+              <i className="fas fa-image"></i> Upload Photo
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
