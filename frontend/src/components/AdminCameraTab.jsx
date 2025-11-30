@@ -34,28 +34,40 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
   // Request camera access (wrapped in useCallback)
   const startCamera = useCallback(async () => {
     setError(null);
-    setCameraActive(true);
     
     try {
       console.log('📸 Starting camera...');
       
-      // Wait for DOM to render the video element
-      let videoElement = null;
-      let attempts = 0;
-      const maxAttempts = 10;
+      // First, check if video element exists in DOM (don't set cameraActive yet)
+      console.log('videoRef.current exists?', videoRef.current ? 'yes' : 'no');
       
-      while (!videoElement && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        videoElement = videoRef.current;
-        attempts++;
-        console.log(`Attempt ${attempts}: videoRef.current =`, videoElement ? 'found' : 'not found');
-      }
-      
-      if (!videoElement) {
-        console.error('Video element not found after max attempts');
-        setError('Camera element not ready. Please try again.');
-        setCameraActive(false);
-        return;
+      if (!videoRef.current) {
+        // Set cameraActive to render the video element first
+        setCameraActive(true);
+        
+        // Now wait for it to be rendered
+        let videoElement = null;
+        let attempts = 0;
+        const maxAttempts = 15; // Increase to 15 attempts = 1.5 seconds
+        
+        while (!videoElement && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          videoElement = videoRef.current;
+          attempts++;
+          if (attempts <= 3 || attempts % 5 === 0) {
+            console.log(`Attempt ${attempts}/${maxAttempts}: video element =`, videoElement ? 'found' : 'waiting...');
+          }
+        }
+        
+        if (!videoElement) {
+          console.error('Video element not found after all attempts');
+          setError('Camera element not ready. Please refresh and try again.');
+          setCameraActive(false);
+          return;
+        }
+      } else {
+        // Video element already exists, just ensure cameraActive is true
+        setCameraActive(true);
       }
 
       const constraints = {
