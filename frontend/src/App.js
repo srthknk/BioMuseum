@@ -92,6 +92,7 @@ const Homepage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = React.useContext(AdminContext);
@@ -217,6 +218,12 @@ const Homepage = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-white">🌿 BioMuseum</h1>
             </div>
             <div className="flex gap-2 sm:gap-3 items-center">
+              <button
+                onClick={() => setShowSuggestionModal(true)}
+                className={`${isDark ? 'bg-blue-700 hover:bg-blue-600 text-blue-100' : 'bg-white hover:bg-gray-100 text-green-700'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
+              >
+                <i className="fas fa-lightbulb"></i> <span className="hidden sm:inline">Suggest</span>
+              </button>
               <button
                 onClick={toggleTheme}
                 className={`${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-100'} ${isDark ? 'text-yellow-400' : 'text-gray-800'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
@@ -383,6 +390,14 @@ const Homepage = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {showSuggestionModal && (
+        <SuggestionModal 
+          isDark={isDark} 
+          onClose={() => setShowSuggestionModal(false)}
+          token={null}
+        />
       )}
     </div>
   );
@@ -1308,6 +1323,157 @@ const AddOrganismForm = ({ token, isDark, onSuccess }) => {
           </button>
         </div>
       </form>
+    </div>
+  );
+};
+
+// Suggestion Modal Component - Allow public users to suggest organisms
+const SuggestionModal = ({ isDark, onClose, token }) => {
+  const [formData, setFormData] = useState({
+    user_name: '',
+    organism_name: '',
+    description: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.user_name.trim() || !formData.organism_name.trim()) {
+      setMessage('Please fill in all required fields');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const response = await axios.post(`${API}/suggestions`, formData);
+      
+      if (response.status === 201) {
+        setMessage('✅ Thank you for your suggestion! Our admins will review it soon.');
+        setTimeout(() => {
+          setFormData({ user_name: '', organism_name: '', description: '' });
+          onClose();
+        }, 2000);
+      }
+    } catch (error) {
+      setMessage('❌ Error submitting suggestion: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto`}>
+      <div className={`${isDark ? 'bg-gray-900' : 'bg-white'} rounded-lg p-5 sm:p-8 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl my-auto`}>
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+          <h3 className={`text-xl sm:text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>
+            🦁 Suggest Organism
+          </h3>
+          <button
+            onClick={onClose}
+            className={`text-2xl ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'}`}
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              Your Name *
+            </label>
+            <input
+              type="text"
+              name="user_name"
+              value={formData.user_name}
+              onChange={handleChange}
+              placeholder="Enter your name"
+              className={`w-full px-4 py-2.5 rounded-lg border-2 transition-all ${
+                isDark 
+                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-green-500' 
+                  : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-green-500'
+              } focus:outline-none`}
+              required
+            />
+          </div>
+
+          <div>
+            <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              Organism/Animal Name *
+            </label>
+            <input
+              type="text"
+              name="organism_name"
+              value={formData.organism_name}
+              onChange={handleChange}
+              placeholder="e.g., Bengal Tiger, Blue Whale"
+              className={`w-full px-4 py-2.5 rounded-lg border-2 transition-all ${
+                isDark 
+                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-green-500' 
+                  : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-green-500'
+              } focus:outline-none`}
+              required
+            />
+          </div>
+
+          <div>
+            <label className={`block text-sm font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              Description (Optional)
+            </label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="Tell us why this organism should be in our museum..."
+              rows="3"
+              className={`w-full px-4 py-2.5 rounded-lg border-2 transition-all resize-none ${
+                isDark 
+                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:border-green-500' 
+                  : 'bg-white border-gray-300 text-gray-800 placeholder-gray-400 focus:border-green-500'
+              } focus:outline-none`}
+            />
+          </div>
+
+          {message && (
+            <div className={`p-3 rounded-lg text-sm font-medium ${
+              message.includes('✅')
+                ? isDark ? 'bg-green-900 text-green-200' : 'bg-green-100 text-green-800'
+                : isDark ? 'bg-red-900 text-red-200' : 'bg-red-100 text-red-800'
+            }`}>
+              {message}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2.5 rounded-lg font-medium transition-all"
+            >
+              {loading ? '⏳ Submitting...' : '📤 Submit Suggestion'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className={`flex-1 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                isDark 
+                  ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                  : 'bg-gray-300 hover:bg-gray-400 text-gray-800'
+              }`}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
