@@ -31,43 +31,37 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
     console.log('✅ Camera stopped');
   }, [stream]);
 
+  // Helper to wait for video element to be in DOM
+  const waitForVideoElement = async (maxAttempts = 30) => {
+    let attempts = 0;
+    while (attempts < maxAttempts) {
+      if (videoRef.current) {
+        console.log(`✅ Video element found on attempt ${attempts + 1}`);
+        return true;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+      console.log(`Waiting for video element... (${attempts}/${maxAttempts})`);
+    }
+    return false;
+  };
+
   // Request camera access (wrapped in useCallback)
   const startCamera = useCallback(async () => {
     setError(null);
+    setCameraActive(true);
     
     try {
-      console.log('📸 Starting camera...');
+      console.log('📸 Starting camera - waiting for video element...');
       
-      // First, check if video element exists in DOM (don't set cameraActive yet)
-      console.log('videoRef.current exists?', videoRef.current ? 'yes' : 'no');
+      // Wait for the video element to actually be rendered
+      const videoElementReady = await waitForVideoElement(30);
       
-      if (!videoRef.current) {
-        // Set cameraActive to render the video element first
-        setCameraActive(true);
-        
-        // Now wait for it to be rendered
-        let videoElement = null;
-        let attempts = 0;
-        const maxAttempts = 15; // Increase to 15 attempts = 1.5 seconds
-        
-        while (!videoElement && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          videoElement = videoRef.current;
-          attempts++;
-          if (attempts <= 3 || attempts % 5 === 0) {
-            console.log(`Attempt ${attempts}/${maxAttempts}: video element =`, videoElement ? 'found' : 'waiting...');
-          }
-        }
-        
-        if (!videoElement) {
-          console.error('Video element not found after all attempts');
-          setError('Camera element not ready. Please refresh and try again.');
-          setCameraActive(false);
-          return;
-        }
-      } else {
-        // Video element already exists, just ensure cameraActive is true
-        setCameraActive(true);
+      if (!videoElementReady) {
+        console.error('❌ Video element never appeared');
+        setError('Camera element not ready. Please refresh and try again.');
+        setCameraActive(false);
+        return;
       }
 
       const constraints = {
@@ -79,21 +73,19 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
         audio: false
       };
 
-      console.log('Requesting getUserMedia with constraints:', constraints);
+      console.log('Requesting getUserMedia...');
       const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       
-      console.log('✅ Media stream obtained, tracks:', mediaStream.getTracks().length);
+      console.log('✅ Media stream obtained, assigning to video...');
       setStream(mediaStream);
       
       // Assign stream to video element
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        console.log('✅ Stream assigned to video element');
         
-        // Wait a tick, then play
+        // Play the video
         setTimeout(() => {
           if (videoRef.current) {
-            console.log('Attempting to play video...');
             videoRef.current.play()
               .then(() => console.log('✅ Video playing'))
               .catch(error => console.error('❌ Play failed:', error));
