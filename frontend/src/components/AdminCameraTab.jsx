@@ -15,6 +15,7 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
   const [error, setError] = useState(null);
   const [stream, setStream] = useState(null);
   const [cameraPermission, setCameraPermission] = useState('pending'); // pending, granted, denied
+  const [facingMode, setFacingMode] = useState('environment'); // 'environment' (back) or 'user' (front)
 
   // Request camera access
   const startCamera = async () => {
@@ -39,6 +40,7 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
 
       const constraints = {
         video: { 
+          facingMode: facingMode,
           width: { ideal: 1280 }, 
           height: { ideal: 720 }
         },
@@ -96,6 +98,15 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
     }
     setCameraActive(false);
     console.log('✅ Camera stopped');
+  };
+
+  // Flip camera between front and back
+  const flipCamera = async () => {
+    stopCamera();
+    // Wait a moment for the camera to fully stop
+    await new Promise(resolve => setTimeout(resolve, 300));
+    // Toggle facing mode and restart
+    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
   };
 
   // Capture image from video
@@ -189,6 +200,18 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
     };
   }, [stream]);
 
+  // Auto-restart camera when facingMode changes
+  useEffect(() => {
+    if (cameraActive) {
+      stopCamera();
+      // Small delay to ensure camera fully stops before restarting
+      const timeout = setTimeout(() => {
+        startCamera();
+      }, 300);
+      return () => clearTimeout(timeout);
+    }
+  }, [facingMode]);
+
   return (
     <div className={`max-w-4xl mx-auto ${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-4 sm:p-6`}>
       <h1 className={`text-2xl sm:text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
@@ -247,6 +270,14 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
                     backgroundColor: '#000',
                   }}
                 />
+                {/* Flip Camera Button - Top Right */}
+                <button
+                  onClick={flipCamera}
+                  className="absolute top-4 right-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-lg transition flex items-center gap-2 shadow-lg"
+                  title="Flip camera"
+                >
+                  <i className="fas fa-sync-alt"></i> <span className="hidden sm:inline">Flip</span>
+                </button>
               </div>
 
               {/* Capture Buttons - Responsive layout */}
