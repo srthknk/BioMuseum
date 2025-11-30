@@ -210,7 +210,7 @@ const AdminCameraTab = ({ token, isDark, onIdentificationSuccess }) => {
       }, 300);
       return () => clearTimeout(timeout);
     }
-  }, [facingMode]);
+  }, [cameraActive, facingMode, startCamera, stopCamera]);
 
   return (
     <div className={`max-w-4xl mx-auto ${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-4 sm:p-6`}>
