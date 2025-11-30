@@ -750,7 +750,16 @@ async def delete_organism(organism_id: str, _: bool = Depends(verify_admin_token
 async def get_all_suggestions(_: bool = Depends(verify_admin_token)):
     try:
         suggestions = await suggestions_collection.find().to_list(1000)
-        return [Suggestion(**sugg) for sugg in suggestions]
+        result = []
+        for sugg in suggestions:
+            # Remove MongoDB's _id field to avoid Pydantic validation error
+            sugg_copy = {k: v for k, v in sugg.items() if k != '_id'}
+            # Add default values for missing fields
+            sugg_copy.setdefault('educational_level', 'Not specified')
+            sugg_copy.setdefault('description', '')
+            sugg_copy.setdefault('status', 'pending')
+            result.append(Suggestion(**sugg_copy))
+        return result
     except Exception as e:
         logging.error(f"Error fetching suggestions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -760,7 +769,16 @@ async def get_all_suggestions(_: bool = Depends(verify_admin_token)):
 async def get_pending_suggestions(_: bool = Depends(verify_admin_token)):
     try:
         suggestions = await suggestions_collection.find({"status": "pending"}).to_list(1000)
-        return [Suggestion(**sugg) for sugg in suggestions]
+        result = []
+        for sugg in suggestions:
+            # Remove MongoDB's _id field to avoid Pydantic validation error
+            sugg_copy = {k: v for k, v in sugg.items() if k != '_id'}
+            # Add default values for missing fields
+            sugg_copy.setdefault('educational_level', 'Not specified')
+            sugg_copy.setdefault('description', '')
+            sugg_copy.setdefault('status', 'pending')
+            result.append(Suggestion(**sugg_copy))
+        return result
     except Exception as e:
         logging.error(f"Error fetching pending suggestions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
