@@ -4,6 +4,7 @@ import axios from "axios";
 import { QrReader } from 'react-qr-reader';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { QRCodeSVG } from 'qrcode.react';
+import AdminCameraTab from './components/AdminCameraTab';
 import "./App.css";
 
 // Determine backend URL based on current location
@@ -763,6 +764,14 @@ const AdminPanel = () => {
               📊 Dashboard
             </button>
             <button
+              onClick={() => setActiveView('camera')}
+              className={`px-6 py-4 font-semibold transition-all ${activeView === 'camera' 
+                ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
+                : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
+            >
+              📸 Camera ID
+            </button>
+            <button
               onClick={() => setActiveView('add')}
               className={`px-6 py-4 font-semibold transition-all ${activeView === 'add' 
                 ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
@@ -804,6 +813,12 @@ const AdminPanel = () => {
                 className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'dashboard' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
               >
                 📊 Dashboard
+              </button>
+              <button
+                onClick={() => { setActiveView('camera'); setMobileMenuOpen(false); }}
+                className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'camera' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
+              >
+                📸 Camera ID
               </button>
               <button
                 onClick={() => { setActiveView('add'); setMobileMenuOpen(false); }}
@@ -857,6 +872,13 @@ const AdminPanel = () => {
             }} 
           />
         )}
+        {activeView === 'camera' && (
+          <AdminCameraTab
+            token={token}
+            isDark={isDark}
+            onIdentificationSuccess={handleApprovalSuccess}
+          />
+        )}
         {activeView === 'manage' && (
           <ManageOrganisms 
             organisms={organisms}
@@ -890,6 +912,7 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
   const [loading, setLoading] = useState(true);
   const [verifyingId, setVerifyingId] = useState(null);
   const [approvingId, setApprovingId] = useState(null);
+  const [verificationResults, setVerificationResults] = useState({});
 
   useEffect(() => {
     fetchSuggestions();
@@ -904,9 +927,37 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
       setSuggestions(response.data || []);
     } catch (error) {
       console.error('Error fetching suggestions:', error);
-      alert('Error loading suggestions');
+      showToast('Error loading suggestions', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // NEW: Check if organism already exists in database
+  const handleCheckExistence = async (suggestionId, organismName) => {
+    setVerifyingId(suggestionId);
+    try {
+      const response = await axios.post(
+        `${API}/admin/verify-organism-exists`,
+        { organism_name: organismName },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Store verification result
+      setVerificationResults(prev => ({
+        ...prev,
+        [suggestionId]: response.data
+      }));
+      
+      if (response.data.exists) {
+        showToast(`⚠️ "${organismName}" already exists in database!`, 'error', 4000);
+      } else {
+        showToast(`✅ "${organismName}" is new and can be approved!`, 'success', 3000);
+      }
+    } catch (error) {
+      showToast('Error verifying organism: ' + (error.response?.data?.detail || error.message), 'error');
+    } finally {
+      setVerifyingId(null);
     }
   };
 
@@ -926,9 +977,9 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
           : sugg
       ));
       
-      alert('✅ Verification completed! Check the results.');
+      showToast('✅ Verification completed! Check the results.', 'success', 3000);
     } catch (error) {
-      alert('Error verifying suggestion: ' + (error.response?.data?.detail || error.message));
+      showToast('Error verifying suggestion: ' + (error.response?.data?.detail || error.message), 'error');
     } finally {
       setVerifyingId(null);
     }
@@ -937,6 +988,30 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
   const handleApprove = async (suggestionId, suggestion) => {
     setApprovingId(suggestionId);
     try {
+      // First check if organism already exists
+      const existenceCheck = await axios.post(
+        `${API}/admin/verify-organism-exists`,
+        { organism_name: suggestion.organism_name },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      if (existenceCheck.data.exists) {
+        // Organism already exists - auto-reject it
+        await axios.put(
+          `${API}/admin/suggestions/${suggestionId}/status`,
+          null,
+          { 
+            params: { status: 'rejected' },
+            headers: { Authorization: `Bearer ${token}` } 
+          }
+        );
+        
+        setSuggestions(prev => prev.filter(sugg => sugg.id !== suggestionId));
+        showToast(`❌ Auto-rejected! "${suggestion.organism_name}" already exists in database.`, 'error', 4000);
+        return;
+      }
+      
+      // If not a duplicate, proceed with approval
       const response = await axios.post(
         `${API}/admin/suggestions/${suggestionId}/approve`,
         {},
@@ -944,7 +1019,6 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
       );
       
       // Extract organism_data from the response
-      // Backend returns: { success: true, organism_data: {...}, suggestion_id, message }
       const organizmData = response.data.organism_data || response.data;
       
       console.log('🎉 Approval Response:', response.data);
@@ -979,10 +1053,10 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
       
       // Remove from suggestions list
       setSuggestions(prev => prev.filter(sugg => sugg.id !== suggestionId));
-      alert('✅ Suggestion approved! Form auto-filled in Add Organism tab.');
+      showToast('✅ Suggestion approved! Form auto-filled in Add Organism tab.', 'success', 3000);
     } catch (error) {
       console.error('❌ Approval Error:', error);
-      alert('Error approving suggestion: ' + (error.response?.data?.detail || error.message));
+      showToast('Error approving suggestion: ' + (error.response?.data?.detail || error.message), 'error');
     } finally {
       setApprovingId(null);
     }
@@ -1001,9 +1075,9 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
         );
         
         setSuggestions(prev => prev.filter(sugg => sugg.id !== suggestionId));
-        alert('❌ Suggestion rejected!');
+        showToast('❌ Suggestion rejected!', 'error', 3000);
       } catch (error) {
-        alert('Error rejecting suggestion: ' + (error.response?.data?.detail || error.message));
+        showToast('Error rejecting suggestion: ' + (error.response?.data?.detail || error.message), 'error');
       }
     }
   };
@@ -1017,9 +1091,9 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
         );
         
         setSuggestions(prev => prev.filter(sugg => sugg.id !== suggestionId));
-        alert('✅ Suggestion deleted!');
+        showToast('✅ Suggestion deleted!', 'success', 3000);
       } catch (error) {
-        alert('Error deleting suggestion: ' + (error.response?.data?.detail || error.message));
+        showToast('Error deleting suggestion: ' + (error.response?.data?.detail || error.message), 'error');
       }
     }
   };
@@ -1090,6 +1164,45 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
               </div>
             )}
 
+            {/* NEW: Organism Existence Check Card */}
+            {verificationResults[suggestion.id] && (
+              <div className={`mb-4 p-3 sm:p-4 rounded-lg border-2 ${
+                verificationResults[suggestion.id].exists
+                  ? isDark ? 'bg-red-900 border-red-600' : 'bg-red-50 border-red-300'
+                  : isDark ? 'bg-green-900 border-green-600' : 'bg-green-50 border-green-300'
+              }`}>
+                <div className="flex items-start gap-2">
+                  <div className={`text-xl sm:text-2xl ${verificationResults[suggestion.id].exists ? '❌' : '✅'}`}></div>
+                  <div className="flex-1">
+                    <p className={`font-bold text-sm sm:text-base ${
+                      verificationResults[suggestion.id].exists
+                        ? isDark ? 'text-red-200' : 'text-red-800'
+                        : isDark ? 'text-green-200' : 'text-green-800'
+                    }`}>
+                      {verificationResults[suggestion.id].exists ? 'Already Exists' : 'New Organism'}
+                    </p>
+                    <p className={`text-xs sm:text-sm mt-1 ${
+                      verificationResults[suggestion.id].exists
+                        ? isDark ? 'text-red-100' : 'text-red-700'
+                        : isDark ? 'text-green-100' : 'text-green-700'
+                    }`}>
+                      {verificationResults[suggestion.id].message}
+                    </p>
+                    {verificationResults[suggestion.id].exists && verificationResults[suggestion.id].organism && (
+                      <div className={`mt-2 text-xs sm:text-sm ${
+                        isDark ? 'text-red-100' : 'text-red-700'
+                      }`}>
+                        <p><span className="font-semibold">Name:</span> {verificationResults[suggestion.id].organism.name}</p>
+                        {verificationResults[suggestion.id].organism.scientific_name && (
+                          <p><span className="font-semibold">Scientific:</span> {verificationResults[suggestion.id].organism.scientific_name}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {suggestion.ai_verification && (
               <div className={`mb-4 p-3 sm:p-4 rounded-lg border-2 ${
                 suggestion.ai_verification.is_authentic 
@@ -1110,6 +1223,15 @@ const SuggestedOrganismsTab = ({ token, isDark, onApprovalSuccess }) => {
             )}
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-wrap">
+              {/* NEW: Check Existence Button */}
+              <button
+                onClick={() => handleCheckExistence(suggestion.id, suggestion.organism_name)}
+                disabled={verifyingId === suggestion.id}
+                className="flex-1 sm:flex-none bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm transition-all"
+              >
+                {verifyingId === suggestion.id ? '⏳ Checking...' : '🔍 Check Database'}
+              </button>
+
               {!suggestion.ai_verification && (
                 <button
                   onClick={() => handleVerifyWithAI(suggestion.id)}
@@ -1220,7 +1342,7 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
   const [aiImageLoading, setAiImageLoading] = useState(false);
   const [aiImageOrganism, setAiImageOrganism] = useState('');
 
-  // Auto-fill form when initialData is provided (from approval)
+  // Auto-fill form when initialData is provided (from camera identification)
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
       console.log('📥 useEffect triggered with initialData:', initialData);
@@ -1237,18 +1359,70 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
           genus: '',
           species: ''
         },
-        morphology: initialData.morphology || '',
-        physiology: initialData.physiology || '',
-        description: initialData.description || '',
+        morphology: '', // Empty - will be filled by AI agent
+        physiology: '', // Empty - will be filled by AI agent
+        description: '', // Empty - will be filled by AI agent
         images: Array.isArray(initialData.images) ? initialData.images : []
       };
       
       console.log('✏️ Setting formData to:', newFormData);
       setFormData(newFormData);
+      
+      // Auto-trigger AI agent to generate morphology, physiology, description
+      if (initialData.name) {
+        console.log('🤖 Triggering AI agent for organism:', initialData.name);
+        setAiOrganismName(initialData.name);
+        // The AI will be triggered in the next useEffect
+      }
     } else {
       console.log('⚠️ initialData is empty or null:', initialData);
     }
   }, [initialData]);
+
+  // Auto-trigger AI agent when initialData is set
+  // This happens when:
+  // 1. Camera identifies an organism
+  // 2. Suggestion is approved
+  useEffect(() => {
+    const triggerAI = async () => {
+      if (initialData && initialData.name && initialData.name.trim() && !aiLoading) {
+        console.log('🤖 Auto-triggering AI agent for:', initialData.name);
+        
+        setAiLoading(true);
+        try {
+          const response = await axios.post(`${API}/admin/organisms/ai-complete`, {
+            organism_name: initialData.name
+          }, {
+            timeout: 60000 // 60 second timeout for AI
+          });
+
+          if (response.data.success) {
+            const aiData = response.data.data;
+            setFormData(prev => ({
+              ...prev,
+              name: aiData.name || prev.name,
+              scientific_name: aiData.scientific_name || prev.scientific_name,
+              classification: aiData.classification || prev.classification,
+              morphology: aiData.morphology || prev.morphology,
+              physiology: aiData.physiology || prev.physiology,
+              description: aiData.general_description || prev.description,
+              images: aiData.images && aiData.images.length > 0 ? aiData.images : prev.images
+            }));
+            console.log('✅ AI data filled successfully!');
+            showToast('✅ Organism data filled successfully!', 'success', 2000);
+          }
+        } catch (error) {
+          console.error('❌ AI Error:', error);
+          const errorMsg = error.response?.data?.detail || error.message || 'Failed to get AI response';
+          showToast('⚠️ Could not auto-fill all data: ' + errorMsg, 'warning', 3000);
+        } finally {
+          setAiLoading(false);
+        }
+      }
+    };
+    
+    triggerAI();
+  }, [initialData?.name]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -1318,7 +1492,7 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
 
   const handleAiComplete = async () => {
     if (!aiOrganismName.trim()) {
-      alert('Please enter an organism name');
+      showToast('Please enter an organism name', 'error');
       return;
     }
 
@@ -1343,11 +1517,11 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
         }));
         setShowAiHelper(false);
         setAiOrganismName('');
-        alert('✅ Organism data filled successfully! Review and adjust as needed.');
+        showToast('✅ Organism data filled successfully! Review and adjust as needed.', 'success', 3000);
       }
     } catch (error) {
       const errorMsg = error.response?.data?.detail || error.message || 'Failed to get AI response';
-      alert('Error: ' + errorMsg);
+      showToast('❌ Error: ' + errorMsg, 'error', 3000);
     } finally {
       setAiLoading(false);
     }
@@ -1366,6 +1540,7 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
         organism_name: aiImageOrganism,
         count: 4
       }, {
+        headers: { Authorization: `Bearer ${token}` },
         timeout: 120000 // 2 minute timeout for image generation
       });
 
@@ -1423,14 +1598,55 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
 
   return (
     <div>
+      {/* AI Loading Overlay - Full Screen */}
+      {aiLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 rounded-lg">
+          <div className={`${isDark ? 'bg-gray-900' : 'bg-white'} p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4 text-center animate-pulse`}>
+            <div className="flex justify-center mb-4">
+              <div className="text-5xl animate-bounce">
+                <i className={`fas fa-brain ${isDark ? 'text-blue-400' : 'text-blue-600'}`}></i>
+              </div>
+            </div>
+            <h3 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+              Intelligence is processing.....
+            </h3>
+            <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
+              Intelligence is analyzing the organism and generating detailed information
+            </p>
+            <div className="flex justify-center gap-1">
+              <span className="inline-block w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0s'}}></span>
+              <span className="inline-block w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></span>
+              <span className="inline-block w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6 flex-col sm:flex-row gap-3 sm:gap-4">
         <div className="flex-1 w-full">
           <h2 className={`text-2xl sm:text-3xl font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>➕ Add New Organism</h2>
           {initialData && (
             <div className={`mt-2 p-2 sm:p-3 rounded-lg inline-block ${isDark ? 'bg-green-900 border-2 border-green-600' : 'bg-green-100 border-2 border-green-500'}`}>
               <p className={`text-xs sm:text-sm font-semibold ${isDark ? 'text-green-200' : 'text-green-800'}`}>
-                ✅ Auto-filled from approved suggestion
+                ✅ Auto-filled from Approved Suggestion
               </p>
+            </div>
+          )}
+          {aiLoading && (
+            <div className={`mt-3 p-4 sm:p-5 rounded-lg inline-block animate-pulse ${isDark ? 'bg-gradient-to-r from-blue-900 to-purple-900 border-2 border-blue-500' : 'bg-gradient-to-r from-blue-100 to-purple-100 border-2 border-blue-500'}`}>
+              <div className="flex items-center gap-3">
+                <div className="animate-spin text-2xl">
+                  <i className={`fas fa-brain ${isDark ? 'text-blue-300' : 'text-blue-600'}`}></i>
+                </div>
+                <div>
+                  <p className={`text-sm font-bold ${isDark ? 'text-blue-100' : 'text-blue-900'}`}>
+                     Intelligence is processing.....
+                  </p>
+                  <p className={`text-xs ${isDark ? 'text-blue-200' : 'text-blue-700'}`}>
+                    AI is analyzing and generating detailed information about the organism
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>

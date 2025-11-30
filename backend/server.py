@@ -401,11 +401,35 @@ class OrganismNameRequest(BaseModel):
     organism_name: str = Field(..., description="Common name of the organism")
 
 # AI Endpoint - Generate organism data using Gemini
+@api_router.post("/admin/organisms/ai-generate-images")
+async def generate_ai_images(request: dict, _: bool = Depends(verify_admin_token)):
+    """Generate images for an organism using Unsplash API. Admin only."""
+    try:
+        organism_name = request.get('organism_name', '').strip()
+        count = request.get('count', 4)
+        
+        if not organism_name:
+            raise HTTPException(status_code=400, detail="Organism name is required")
+        
+        # Generate images using Unsplash
+        images = search_unsplash_images(organism_name, count=count)
+        
+        return {
+            "success": True,
+            "image_urls": images,
+            "count": len(images)
+        }
+    except Exception as e:
+        logging.error(f"Error generating images for {organism_name}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating images: {str(e)}")
+
+
 @api_router.post("/admin/organisms/ai-complete")
 async def generate_organism_data_ai(request: OrganismNameRequest):
     """
     Generate organism data using Google Gemini AI.
     Admin only needs to provide the organism name.
+    Includes image generation from Unsplash.
     """
     if not GEMINI_API_KEY:
         error_msg = "AI feature is not configured. GEMINI_API_KEY is missing. Please set the GEMINI_API_KEY environment variable in your .env file or on Render dashboard."
@@ -472,12 +496,26 @@ Make sure the JSON is valid and properly formatted."""
             if field not in organism_data:
                 organism_data[field] = ""
         
-        # Return the generated data
+        # Generate images using Unsplash
+        images = []
+        try:
+            search_term = organism_data.get('name', organism_name) or organism_name
+            images = search_unsplash_images(search_term, count=5)
+            logging.info(f"Generated {len(images)} images for {search_term}")
+        except Exception as e:
+            logging.warning(f"Error generating images: {e}")
+            images = []
+        
+        # Return the generated data with images
         return {
             "success": True,
-            "data": organism_data,
+            "data": {
+                **organism_data,
+                "images": images
+            },
             "source": "ai_generated"
         }
+
         
     except json.JSONDecodeError as e:
         logging.error(f"JSON parsing error: {e}")
@@ -487,31 +525,32 @@ Make sure the JSON is valid and properly formatted."""
         raise HTTPException(status_code=500, detail=f"Error generating organism data: {str(e)}")
 
 
-def get_search_terms_from_gemini(organism_name: str):
-    """Use Gemini to generate better search terms for organism images."""
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=GOOGLE_API_KEY)
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        prompt = f'Given the organism name "{organism_name}", generate 3-5 search keywords that would find relevant images on Unsplash. Each keyword should be a single word or short phrase. Return ONLY the keywords as comma-separated list. Example: "cobra, snake, reptile"'
-        response = model.generate_content(prompt)
-        search_terms = [term.strip() for term in response.text.split(',')]
-        return search_terms
-    except Exception as e:
-        return [organism_name.lower()]
-
 def search_unsplash_images(organism_name: str, count: int = 6):
-    """Search Unsplash API for organism images using AI-enhanced search terms."""
+    """Search Unsplash API for organism images with fallback options."""
     UNSPLASH_ACCESS_KEY = "vQ_yvjIskYKmvpXywThJ4u5kBjRzTAk1kDZkwYhwDbY"
     UNSPLASH_API_URL = "https://api.unsplash.com"
     images = []
-    search_terms = get_search_terms_from_gemini(organism_name)
-    search_terms.insert(0, organism_name)
     
+    # Define search terms with fallbacks
+    search_terms = [
+        organism_name,  # Primary: organism name
+        organism_name.lower(),  # Lowercase version
+    ]
+    
+    # Add first word if multi-word organism name
+    if ' ' in organism_name:
+        search_terms.append(organism_name.split()[0])
+    
+    # Add generic fallbacks
+    search_terms.extend(["animal", "nature", "wildlife"])
+    
+    # Try each search term
     for query in search_terms:
         if len(images) >= count:
             break
+        
         try:
+            logging.info(f"Searching Unsplash for: {query}")
             response = requests.get(
                 f"{UNSPLASH_API_URL}/search/photos",
                 params={
@@ -520,80 +559,202 @@ def search_unsplash_images(organism_name: str, count: int = 6):
                     'per_page': 10,
                     'orientation': 'landscape'
                 },
-                timeout=10
+                timeout=10,
+                headers={'User-Agent': 'BioMuseum/1.0'}
             )
+            
             if response.status_code == 200:
                 data = response.json()
-                for result in data.get('results', []):
+                results = data.get('results', [])
+                logging.info(f"Found {len(results)} results for '{query}'")
+                
+                for result in results:
                     if len(images) >= count:
                         break
+                    
                     img_url = result.get('urls', {}).get('regular', '')
                     if img_url and img_url not in images:
+                        # Add quality parameters
                         if '?' in img_url:
                             img_url += '&w=800&q=90'
                         else:
                             img_url += '?w=800&q=90'
                         images.append(img_url)
+                        logging.info(f"Added image: {img_url[:50]}...")
+            else:
+                logging.warning(f"Unsplash returned status {response.status_code} for '{query}'")
+                
         except Exception as e:
+            logging.warning(f"Error searching Unsplash for '{query}': {e}")
             continue
     
-    if not images:
-        try:
-            response = requests.get(
-                f"{UNSPLASH_API_URL}/search/photos",
-                params={
-                    'query': organism_name,
-                    'client_id': UNSPLASH_ACCESS_KEY,
-                    'per_page': 6
-                },
-                timeout=10
-            )
-            if response.status_code == 200:
-                data = response.json()
-                for result in data.get('results', [])[:6]:
-                    img_url = result.get('urls', {}).get('regular', '')
-                    if img_url:
-                        if '?' in img_url:
-                            img_url += '&w=800&q=90'
-                        else:
-                            img_url += '?w=800&q=90'
-                        images.append(img_url)
-        except Exception as e:
-            pass
-    
+    logging.info(f"Retrieved {len(images)} total images for '{organism_name}'")
     return images[:count]
 
-
-@api_router.post("/admin/organisms/ai-generate-images")
-async def generate_organism_images_ai(request: dict):
-    """Generate organism images using Unsplash API with AI-enhanced search."""
+def get_search_terms_from_gemini(organism_name: str):
+    """Use Gemini to generate better search terms for organism images."""
     try:
-        organism_name = request.get("organism_name", "").strip()
+        import google.generativeai as genai
+        genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        prompt = f'Given the organism name "{organism_name}", generate 3-5 search keywords that would find relevant images on Unsplash. Each keyword should be a single word or short phrase. Return ONLY the keywords as comma-separated list. Example: "cobra, snake, reptile"'
+        response = model.generate_content(prompt)
+        search_terms = [term.strip() for term in response.text.split(',')]
+        return search_terms
+    except Exception as e:
+        logging.warning(f"Could not get search terms from Gemini: {e}")
+        return [organism_name.lower()]
+
+# Root endpoint for health checks and load balancers
+@app.get("/")
+async def root_health():
+    return {"status": "ok", "service": "Biology Museum API", "version": "1.0.0"}
+
+@api_router.post("/admin/identify-organism")
+async def identify_organism_from_camera(request: dict):
+    """
+    Identify organism from camera image using Gemini Vision AI.
+    
+    Request:
+    {
+        "image_data": "base64_encoded_image_with_data_uri"
+    }
+    
+    Response:
+    {
+        "success": true,
+        "organism_name": "Bengal Tiger",
+        "scientific_name": "Panthera tigris",
+        "confidence": 94,
+        "description": "Large carnivorous cat...",
+        "classification": {
+            "kingdom": "Animalia",
+            "phylum": "Chordata",
+            "class": "Mammalia",
+            "order": "Carnivora",
+            "family": "Felidae",
+            "genus": "Panthera",
+            "species": "tigris"
+        },
+        "characteristics": ["Orange coat", "Black stripes", ...]
+    }
+    """
+    try:
+        if not HAS_GENAI or not GEMINI_API_KEY:
+            raise ValueError("Gemini API not configured")
         
-        if not organism_name:
-            raise ValueError("organism_name is required")
+        image_data = request.get("image_data", "")
         
-        image_urls = search_unsplash_images(organism_name, count=6)
+        if not image_data:
+            raise ValueError("image_data is required")
         
-        if not image_urls:
-            image_urls = [
-                "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=90",
-                "https://images.unsplash.com/photo-1489330911046-c894fdcc538d?w=800&q=90"
-            ]
+        print(f"[INFO] Identifying organism from camera image...")
+        
+        # Create identification prompt
+        prompt = """Analyze this photograph and identify the organism shown. Be precise and scientific.
+
+IMPORTANT: Respond ONLY in valid JSON format with no other text.
+
+{
+    "is_organism": boolean (true if a living organism is clearly visible),
+    "organism_name": "Common name if identifiable, or null if cannot identify",
+    "scientific_name": "Scientific name if known, or null",
+    "confidence": number (0-100, your confidence level),
+    "description": "Brief 2-3 sentence description of the organism visible in photo",
+    "characteristics": ["list", "of", "visible", "characteristics", "like", "color", "size", "markings"],
+    "classification": {
+        "kingdom": "e.g., Animalia (required if organism identified)",
+        "phylum": "e.g., Chordata",
+        "class": "e.g., Mammalia",
+        "order": "e.g., Carnivora",
+        "family": "e.g., Felidae",
+        "genus": "e.g., Panthera",
+        "species": "e.g., tigris"
+    }
+}
+
+Guidelines:
+- Only identify if you are reasonably confident (>50% confidence minimum)
+- Be specific: avoid vague identifications like "bird" or "animal"
+- For unknown organisms, set confidence to 0 and organism_name to null
+- Classification should be as complete as possible, or empty strings for unknown levels
+- Characteristics should be observable features from the photo"""
+
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        
+        # Remove data:image/... prefix if present
+        if ',' in image_data:
+            image_data_clean = image_data.split(',')[1]
+        else:
+            image_data_clean = image_data
+        
+        # Decode base64
+        image_bytes = base64.b64decode(image_data_clean)
+        
+        response = model.generate_content([
+            prompt,
+            {
+                "mime_type": "image/jpeg",
+                "data": base64.b64encode(image_bytes).decode()
+            }
+        ])
+        
+        # Parse response
+        response_text = response.text
+        print(f"[INFO] Gemini response: {response_text[:200]}...")
+        
+        # Extract JSON
+        start_idx = response_text.find('{')
+        end_idx = response_text.rfind('}') + 1
+        
+        if start_idx < 0 or end_idx <= 0:
+            raise ValueError("Could not parse AI response as JSON")
+        
+        json_str = response_text[start_idx:end_idx]
+        result = json.loads(json_str)
+        
+        # Validate response
+        if not result.get("is_organism", False):
+            return {
+                "success": False,
+                "error": "No organism detected in image. Please take a clearer photo.",
+                "confidence": 0
+            }
+        
+        if result.get("confidence", 0) < 40:
+            return {
+                "success": False,
+                "error": f"Could not confidently identify organism (confidence: {result.get('confidence', 0)}%). Please try another photo.",
+                "confidence": result.get("confidence", 0)
+            }
+        
+        print(f"[OK] Identified: {result.get('organism_name')} (confidence: {result.get('confidence')}%)")
         
         return {
             "success": True,
-            "organism_name": organism_name,
-            "image_urls": image_urls[:6],
-            "source": "unsplash",
-            "message": f"Generated {len(image_urls)} images for {organism_name}"
+            "organism_name": result.get("organism_name"),
+            "scientific_name": result.get("scientific_name"),
+            "confidence": min(100, max(0, result.get("confidence", 50))),  # Clamp 0-100
+            "description": result.get("description", ""),
+            "characteristics": result.get("characteristics", []),
+            "classification": result.get("classification", {})
+        }
+    
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON parse error: {e}")
+        return {
+            "success": False,
+            "error": "Failed to parse AI response. Please try again.",
+            "message": "AI response parsing failed"
         }
     except Exception as e:
-        print(f"[ERROR] AI image generation failed: {str(e)}")
+        logger.error(f"Organism identification error: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "success": False,
             "error": str(e),
-            "message": "Failed to generate images"
+            "message": "Failed to identify organism"
         }
 
 @api_router.post("/admin/login", response_model=AdminToken)
@@ -1027,6 +1188,107 @@ async def delete_suggestion(suggestion_id: str, _: bool = Depends(verify_admin_t
         logging.error(f"Error deleting suggestion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Verify if organism exists in database (for both suggestions and camera feature)
+@api_router.post("/admin/verify-organism-exists")
+async def verify_organism_exists(request: dict, _: bool = Depends(verify_admin_token)):
+    """
+    Check if an organism already exists in the database by name or scientific name.
+    Used for both camera suggestions and manual suggestions to avoid duplicates.
+    """
+    try:
+        organism_name = request.get('organism_name', '').strip()
+        scientific_name = request.get('scientific_name', '').strip()
+        
+        if not organism_name:
+            raise HTTPException(status_code=400, detail="Organism name is required")
+        
+        # Search for organism by name (case-insensitive) or scientific name
+        query = {
+            "$or": [
+                {"name": {"$regex": f"^{organism_name}$", "$options": "i"}},
+            ]
+        }
+        
+        if scientific_name:
+            query["$or"].append({"scientific_name": {"$regex": f"^{scientific_name}$", "$options": "i"}})
+        
+        existing_organism = await organisms_collection.find_one(query)
+        
+        if existing_organism:
+            # Organism exists - return details
+            return {
+                "exists": True,
+                "organism": {
+                    "id": existing_organism.get("id"),
+                    "name": existing_organism.get("name"),
+                    "scientific_name": existing_organism.get("scientific_name"),
+                    "classification": existing_organism.get("classification", {})
+                },
+                "message": f"'{organism_name}' already exists in the database"
+            }
+        else:
+            # Organism does not exist - can be added
+            return {
+                "exists": False,
+                "message": f"'{organism_name}' is not in the database yet. This suggestion can be approved."
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error verifying organism: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Auto-reject duplicate suggestions (called when suggestion is created)
+@api_router.post("/admin/check-and-auto-reject-duplicate")
+async def check_and_auto_reject_duplicate(suggestion_id: str, _: bool = Depends(verify_admin_token)):
+    """
+    Check if a suggestion is for an existing organism and auto-reject it if found.
+    """
+    try:
+        suggestion = await suggestions_collection.find_one({"id": suggestion_id})
+        if not suggestion:
+            raise HTTPException(status_code=404, detail="Suggestion not found")
+        
+        organism_name = suggestion.get('organism_name', '').strip()
+        
+        # Search for organism by name (case-insensitive)
+        existing_organism = await organisms_collection.find_one(
+            {"name": {"$regex": f"^{organism_name}$", "$options": "i"}}
+        )
+        
+        if existing_organism:
+            # Auto-reject the suggestion
+            await suggestions_collection.update_one(
+                {"id": suggestion_id},
+                {
+                    "$set": {
+                        "status": "rejected",
+                        "rejection_reason": f"Duplicate: '{organism_name}' already exists in database (ID: {existing_organism.get('id')})",
+                        "auto_rejected": True,
+                        "updated_at": datetime.utcnow().isoformat()
+                    }
+                }
+            )
+            
+            return {
+                "auto_rejected": True,
+                "reason": f"'{organism_name}' already exists in the database",
+                "existing_organism": {
+                    "id": existing_organism.get("id"),
+                    "name": existing_organism.get("name")
+                }
+            }
+        else:
+            return {
+                "auto_rejected": False,
+                "message": "Suggestion is for a new organism and can be reviewed"
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error checking for duplicates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 app.include_router(api_router)
 
 # Parse CORS origins from environment variable
@@ -1051,7 +1313,12 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def startup_event():
-    await init_mongodb()
+    try:
+        await init_mongodb()
+        logging.info("Startup event completed successfully")
+    except Exception as e:
+        logging.error(f"Startup event failed: {e}", exc_info=True)
+        # Don't re-raise - let the server continue even if startup fails
 
 if __name__ == "__main__":
     import uvicorn
