@@ -2229,11 +2229,16 @@ const UsersHistoryTab = ({ token, isDark }) => {
   return (
     <div>
       <div className="flex items-center justify-between gap-3 mb-6 flex-col sm:flex-row">
-        <h2 className={`text-2xl sm:text-3xl font-semibold ${isDark ? 'text-white' : 'text-gray-800'}`}>👥 Users Suggestion History</h2>
+        <div className="flex-1">
+          <h2 className={`text-2xl sm:text-3xl font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>👥 Users Suggestion History</h2>
+          <p className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            📝 All user suggestions appear here automatically when submitted, regardless of approval status. Use the ✕ button to remove any user from history.
+          </p>
+        </div>
         <button
           onClick={handleManualRefresh}
           disabled={refreshing}
-          className={`px-4 py-2 rounded-lg font-semibold transition-all text-sm flex items-center gap-2 ${
+          className={`px-4 py-2 rounded-lg font-semibold transition-all text-sm flex items-center gap-2 whitespace-nowrap ${
             refreshing 
               ? 'bg-gray-500 cursor-not-allowed text-white' 
               : isDark 
@@ -2248,12 +2253,12 @@ const UsersHistoryTab = ({ token, isDark }) => {
       
       {loading ? (
         <div className={`text-center py-8 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-          <p className="text-lg">Loading suggestions...</p>
+          <p className="text-lg">⏳ Loading suggestions...</p>
         </div>
       ) : suggestions.length === 0 ? (
         <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-200'}`}>
-          <p className={`text-lg font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>No suggestions yet</p>
-          <p className={`text-sm mt-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Suggestions from users will appear here</p>
+          <p className={`text-lg font-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>📭 No suggestions yet</p>
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Suggestions from users will appear here automatically when submitted.</p>
         </div>
       ) : (
         <div className={`overflow-x-auto rounded-lg border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -2266,7 +2271,7 @@ const UsersHistoryTab = ({ token, isDark }) => {
                 <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Description</th>
                 <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Date</th>
                 <th className={`px-4 sm:px-6 py-4 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Status</th>
-                <th className={`px-4 sm:px-6 py-4 text-center text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Action</th>
+                <th className={`px-4 sm:px-6 py-4 text-center text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Remove</th>
               </tr>
             </thead>
             <tbody>
@@ -2296,13 +2301,14 @@ const UsersHistoryTab = ({ token, isDark }) => {
                     <button
                       onClick={() => handleDeleteUser(suggestion.id)}
                       disabled={deletingId === suggestion.id}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 disabled:bg-gray-500 text-white transition-colors"
-                      title="Delete this user suggestion"
+                      className="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-500 hover:bg-red-600 disabled:bg-gray-500 text-white transition-colors shadow-md hover:shadow-lg"
+                      title="Remove this user suggestion from history"
+                      aria-label="Delete suggestion"
                     >
                       {deletingId === suggestion.id ? (
-                        <i className="fas fa-spinner fa-spin"></i>
+                        <i className="fas fa-spinner fa-spin text-sm"></i>
                       ) : (
-                        <span className="text-lg">×</span>
+                        <span className="text-lg sm:text-xl font-bold">×</span>
                       )}
                     </button>
                   </td>
@@ -2315,22 +2321,31 @@ const UsersHistoryTab = ({ token, isDark }) => {
 
       {/* Statistics Section */}
       {suggestions.length > 0 && (
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-blue-50'}`}>
-            <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Total Suggestions</p>
-            <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{suggestions.length}</p>
-          </div>
-          <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-green-50'}`}>
-            <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Approved</p>
-            <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-              {suggestions.filter(s => s.status === 'approved').length}
-            </p>
-          </div>
-          <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-yellow-50'}`}>
-            <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Pending</p>
-            <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
-              {suggestions.filter(s => s.status === 'pending').length}
-            </p>
+        <div className="mt-8">
+          <h3 className={`text-lg font-semibold mb-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>📊 Summary</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-blue-50'}`}>
+              <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>📝 Total</p>
+              <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{suggestions.length}</p>
+            </div>
+            <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-green-50'}`}>
+              <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>✅ Approved</p>
+              <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                {suggestions.filter(s => s.status === 'approved').length}
+              </p>
+            </div>
+            <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-yellow-50'}`}>
+              <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>⏳ Pending</p>
+              <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                {suggestions.filter(s => s.status === 'pending').length}
+              </p>
+            </div>
+            <div className={`rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-red-50'}`}>
+              <p className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>❌ Rejected</p>
+              <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
+                {suggestions.filter(s => s.status === 'rejected').length}
+              </p>
+            </div>
           </div>
         </div>
       )}
