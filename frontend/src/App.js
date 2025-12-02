@@ -4,6 +4,9 @@ import axios from "axios";
 import { QrReader } from 'react-qr-reader';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { QRCodeSVG } from 'qrcode.react';
+import BiotubeHomepage from './components/BiotubeHomepage';
+import BiotubeVideoPage from './components/BiotubeVideoPage';
+import BiotubeAdminPanel from './components/BiotubeAdminPanel';
 import "./App.css";
 
 // Determine backend URL based on current location
@@ -253,6 +256,12 @@ const Homepage = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-white">🌿 BioMuseum</h1>
             </div>
             <div className="flex gap-2 sm:gap-3 items-center">
+              <button
+                onClick={() => navigate('/biotube')}
+                className={`${isDark ? 'bg-purple-700 hover:bg-purple-600 text-purple-100' : 'bg-white hover:bg-gray-100 text-purple-700'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
+              >
+                <i className="fas fa-video"></i> <span className="hidden sm:inline">Biotube</span>
+              </button>
               <button
                 onClick={() => setShowSuggestionModal(true)}
                 className={`${isDark ? 'bg-blue-700 hover:bg-blue-600 text-blue-100' : 'bg-white hover:bg-gray-100 text-green-700'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
@@ -794,6 +803,14 @@ const AdminPanel = () => {
             >
               👥 Users History
             </button>
+            <button
+              onClick={() => setActiveView('biotube')}
+              className={`px-6 py-4 font-semibold transition-all ${activeView === 'biotube' 
+                ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
+                : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
+            >
+              🎬 Biotube
+            </button>
           </div>
 
           {/* Mobile Menu */}
@@ -828,6 +845,12 @@ const AdminPanel = () => {
                 className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'users' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
               >
                 👥 Users History
+              </button>
+              <button
+                onClick={() => { setActiveView('biotube'); setMobileMenuOpen(false); }}
+                className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'biotube' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
+              >
+                🎬 Biotube
               </button>
               <button
                 onClick={() => { navigate('/'); setMobileMenuOpen(false); }}
@@ -875,6 +898,12 @@ const AdminPanel = () => {
         )}
         {activeView === 'users' && (
           <UsersHistoryTab 
+            token={token}
+            isDark={isDark}
+          />
+        )}
+        {activeView === 'biotube' && (
+          <BiotubeAdminPanel
             token={token}
             isDark={isDark}
           />
@@ -1357,50 +1386,13 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
     }
   }, [initialData]);
 
-  // Auto-trigger AI agent when initialData is set
-  // This happens when:
-  // 1. Camera identifies an organism
-  // 2. Suggestion is approved
+  // Auto-trigger AI agent when aiOrganismName is set (from camera)
   useEffect(() => {
-    const triggerAI = async () => {
-      if (initialData && initialData.name && initialData.name.trim() && !aiLoading) {
-        console.log('🤖 Auto-triggering AI agent for:', initialData.name);
-        
-        setAiLoading(true);
-        try {
-          const response = await axios.post(`${API}/admin/organisms/ai-complete`, {
-            organism_name: initialData.name
-          }, {
-            timeout: 60000 // 60 second timeout for AI
-          });
-
-          if (response.data.success) {
-            const aiData = response.data.data;
-            setFormData(prev => ({
-              ...prev,
-              name: aiData.name || prev.name,
-              scientific_name: aiData.scientific_name || prev.scientific_name,
-              classification: aiData.classification || prev.classification,
-              morphology: aiData.morphology || prev.morphology,
-              physiology: aiData.physiology || prev.physiology,
-              description: aiData.general_description || prev.description,
-              images: aiData.images && aiData.images.length > 0 ? aiData.images : prev.images
-            }));
-            console.log('✅ AI data filled successfully!');
-            showToast('✅ Organism data filled successfully!', 'success', 2000);
-          }
-        } catch (error) {
-          console.error('❌ AI Error:', error);
-          const errorMsg = error.response?.data?.detail || error.message || 'Failed to get AI response';
-          showToast('⚠️ Could not auto-fill all data: ' + errorMsg, 'warning', 3000);
-        } finally {
-          setAiLoading(false);
-        }
-      }
-    };
-    
-    triggerAI();
-  }, [initialData?.name]);
+    if (aiOrganismName.trim() && !aiLoading) {
+      console.log('🤖 Auto-triggering AI agent for:', aiOrganismName);
+      handleAiComplete();
+    }
+  }, [aiOrganismName]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -1518,7 +1510,6 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
         organism_name: aiImageOrganism,
         count: 4
       }, {
-        headers: { Authorization: `Bearer ${token}` },
         timeout: 120000 // 2 minute timeout for image generation
       });
 
@@ -3222,6 +3213,8 @@ function App() {
               <Route path="/scanner" element={<QRScanner />} />
               <Route path="/organism/:id" element={<OrganismDetail />} />
               <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/biotube" element={<BiotubeWrapper />} />
+              <Route path="/biotube/watch/:videoId" element={<BiotubeVideoWrapper />} />
             </Routes>
           </BrowserRouter>
         </div>
@@ -3229,5 +3222,17 @@ function App() {
     </ThemeProvider>
   );
 }
+
+// Biotube Wrapper Component to access theme context
+const BiotubeWrapper = () => {
+  const { isDark } = React.useContext(ThemeContext);
+  return <BiotubeHomepage isDark={isDark} />;
+};
+
+// Biotube Video Wrapper Component to access theme context
+const BiotubeVideoWrapper = () => {
+  const { isDark } = React.useContext(ThemeContext);
+  return <BiotubeVideoPage isDark={isDark} />;
+};
 
 export default App;

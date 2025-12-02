@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -53,10 +53,13 @@ else:
 db = None
 organisms_collection = None
 suggestions_collection = None
+biotube_videos_collection = None
+video_suggestions_collection = None
+video_comments_collection = None
 mongodb_connected = False
 
 async def init_mongodb():
-    global db, organisms_collection, suggestions_collection, mongodb_connected
+    global db, organisms_collection, suggestions_collection, biotube_videos_collection, video_suggestions_collection, video_comments_collection, mongodb_connected
     max_retries = 15  # Increased from 10 to 15
     retry_count = 0
     
@@ -99,13 +102,19 @@ async def init_mongodb():
             db = client[os.environ.get('DB_NAME', 'biomuseum')]
             organisms_collection = db.organisms
             suggestions_collection = db.suggestions
+            biotube_videos_collection = db.biotube_videos
+            video_suggestions_collection = db.video_suggestions
+            video_comments_collection = db.video_comments
             
             # Test that we can actually query
             test_count = await organisms_collection.count_documents({})
             test_suggestions = await suggestions_collection.count_documents({})
+            test_videos = await biotube_videos_collection.count_documents({})
+            test_video_suggestions = await video_suggestions_collection.count_documents({})
+            test_comments = await video_comments_collection.count_documents({})
             
             mongodb_connected = True
-            print(f"[OK] ✓ Successfully connected to MongoDB! Found {test_count} organisms in database")
+            print(f"[OK] ✓ Successfully connected to MongoDB! Found {test_count} organisms, {test_videos} videos in database")
             return
             
         except asyncio.TimeoutError:
@@ -214,6 +223,77 @@ class SuggestionCreate(BaseModel):
     organism_name: str
     description: Optional[str] = ""
     educational_level: str  # Required field
+
+class VerifyOrganismRequest(BaseModel):
+    organism_name: str
+    scientific_name: Optional[str] = None
+
+class BiotubVideo(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    youtube_url: str
+    embed_code: str
+    kingdom: str
+    phylum: str
+    class_name: str
+    species: str
+    description: str = ""
+    thumbnail_url: str = ""
+    qr_code: str = ""
+    visibility: str = "public"  # public, private, draft
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+class BiotubVideoCreate(BaseModel):
+    title: str
+    youtube_url: str
+    kingdom: str
+    phylum: str
+    class_name: str
+    species: str
+    description: Optional[str] = ""
+    thumbnail_url: Optional[str] = ""
+
+class BiotubVideoUpdate(BaseModel):
+    title: Optional[str] = None
+    youtube_url: Optional[str] = None
+    kingdom: Optional[str] = None
+    phylum: Optional[str] = None
+    class_name: Optional[str] = None
+    species: Optional[str] = None
+    description: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    visibility: Optional[str] = None
+
+class VideoSuggestion(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_name: str
+    user_class: str
+    video_title: str
+    video_description: Optional[str] = ""
+    status: str = "pending"  # pending, reviewed, added, dismissed
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+class VideoSuggestionCreate(BaseModel):
+    user_name: str
+    user_class: str
+    video_title: str
+    video_description: Optional[str] = ""
+
+class VideoComment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    video_id: str
+    user_name: str
+    user_class: str
+    text: str
+    likes: int = 0
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+class VideoCommentCreate(BaseModel):
+    user_name: str
+    user_class: str
+    text: str
 
 # Database functions - MongoDB only (no JSON fallback)
 async def get_organisms_list():
@@ -401,29 +481,6 @@ class OrganismNameRequest(BaseModel):
     organism_name: str = Field(..., description="Common name of the organism")
 
 # AI Endpoint - Generate organism data using Gemini
-@api_router.post("/admin/organisms/ai-generate-images")
-async def generate_ai_images(request: dict, _: bool = Depends(verify_admin_token)):
-    """Generate images for an organism using Unsplash API. Admin only."""
-    try:
-        organism_name = request.get('organism_name', '').strip()
-        count = request.get('count', 4)
-        
-        if not organism_name:
-            raise HTTPException(status_code=400, detail="Organism name is required")
-        
-        # Generate images using Unsplash
-        images = search_unsplash_images(organism_name, count=count)
-        
-        return {
-            "success": True,
-            "image_urls": images,
-            "count": len(images)
-        }
-    except Exception as e:
-        logging.error(f"Error generating images for {organism_name}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error generating images: {str(e)}")
-
-
 @api_router.post("/admin/organisms/ai-complete")
 async def generate_organism_data_ai(request: OrganismNameRequest):
     """
@@ -971,7 +1028,7 @@ async def create_suggestion(suggestion: SuggestionCreate):
 
 # Update suggestion status (admin only)
 @api_router.put("/admin/suggestions/{suggestion_id}/status")
-async def update_suggestion_status(suggestion_id: str, status: str, _: bool = Depends(verify_admin_token)):
+async def update_suggestion_status(suggestion_id: str, status: str = Query(...), _: bool = Depends(verify_admin_token)):
     try:
         if status not in ["pending", "approved", "rejected"]:
             raise HTTPException(status_code=400, detail="Invalid status")
@@ -1190,14 +1247,14 @@ async def delete_suggestion(suggestion_id: str, _: bool = Depends(verify_admin_t
 
 # Verify if organism exists in database (for both suggestions and camera feature)
 @api_router.post("/admin/verify-organism-exists")
-async def verify_organism_exists(request: dict, _: bool = Depends(verify_admin_token)):
+async def verify_organism_exists(request: VerifyOrganismRequest, _: bool = Depends(verify_admin_token)):
     """
     Check if an organism already exists in the database by name or scientific name.
     Used for both camera suggestions and manual suggestions to avoid duplicates.
     """
     try:
-        organism_name = request.get('organism_name', '').strip()
-        scientific_name = request.get('scientific_name', '').strip()
+        organism_name = request.organism_name.strip()
+        scientific_name = request.scientific_name.strip() if request.scientific_name else ""
         
         if not organism_name:
             raise HTTPException(status_code=400, detail="Organism name is required")
@@ -1287,6 +1344,444 @@ async def check_and_auto_reject_duplicate(suggestion_id: str, _: bool = Depends(
         raise
     except Exception as e:
         logging.error(f"Error checking for duplicates: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== BIOTUBE ENDPOINTS ====================
+
+# Get all videos (public)
+@api_router.get("/biotube/videos")
+async def get_biotube_videos(kingdom: Optional[str] = None, phylum: Optional[str] = None, class_name: Optional[str] = None, species: Optional[str] = None, search: Optional[str] = None):
+    try:
+        query = {"visibility": "public"}
+        
+        if kingdom:
+            query["kingdom"] = {"$regex": f"^{kingdom}$", "$options": "i"}
+        if phylum:
+            query["phylum"] = {"$regex": f"^{phylum}$", "$options": "i"}
+        if class_name:
+            query["class_name"] = {"$regex": f"^{class_name}$", "$options": "i"}
+        if species:
+            query["species"] = {"$regex": f"^{species}$", "$options": "i"}
+        
+        if search:
+            query["$or"] = [
+                {"title": {"$regex": search, "$options": "i"}},
+                {"description": {"$regex": search, "$options": "i"}},
+                {"kingdom": {"$regex": search, "$options": "i"}},
+                {"species": {"$regex": search, "$options": "i"}}
+            ]
+        
+        videos = await biotube_videos_collection.find(query).sort("created_at", -1).to_list(1000)
+        result = []
+        for video in videos:
+            video_copy = {k: v for k, v in video.items() if k != '_id'}
+            result.append(BiotubVideo(**video_copy))
+        return result
+    except Exception as e:
+        logging.error(f"Error fetching biotube videos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get single video by ID
+@api_router.get("/biotube/videos/{video_id}")
+async def get_biotube_video(video_id: str):
+    try:
+        video = await biotube_videos_collection.find_one({"id": video_id, "visibility": "public"})
+        if not video:
+            raise HTTPException(status_code=404, detail="Video not found")
+        video_copy = {k: v for k, v in video.items() if k != '_id'}
+        return BiotubVideo(**video_copy)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error fetching video: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get related videos
+@api_router.get("/biotube/videos/{video_id}/related")
+async def get_related_videos(video_id: str):
+    try:
+        video = await biotube_videos_collection.find_one({"id": video_id})
+        if not video:
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        # Find videos with same kingdom or phylum
+        related = await biotube_videos_collection.find({
+            "visibility": "public",
+            "id": {"$ne": video_id},
+            "$or": [
+                {"kingdom": video.get("kingdom")},
+                {"phylum": video.get("phylum")}
+            ]
+        }).limit(6).to_list(6)
+        
+        result = []
+        for vid in related:
+            video_copy = {k: v for k, v in vid.items() if k != '_id'}
+            result.append(BiotubVideo(**video_copy))
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error fetching related videos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get available filters
+@api_router.get("/biotube/filters")
+async def get_biotube_filters():
+    try:
+        kingdoms = await biotube_videos_collection.distinct("kingdom", {"visibility": "public"})
+        phylums = await biotube_videos_collection.distinct("phylum", {"visibility": "public"})
+        classes = await biotube_videos_collection.distinct("class_name", {"visibility": "public"})
+        species_list = await biotube_videos_collection.distinct("species", {"visibility": "public"})
+        
+        return {
+            "kingdoms": sorted(kingdoms),
+            "phylums": sorted(phylums),
+            "classes": sorted(classes),
+            "species": sorted(species_list)
+        }
+    except Exception as e:
+        logging.error(f"Error fetching filters: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Create video suggestion (public)
+@api_router.post("/biotube/suggest-video")
+async def create_video_suggestion(suggestion: VideoSuggestionCreate):
+    try:
+        if not suggestion.user_name.strip() or not suggestion.video_title.strip():
+            raise HTTPException(status_code=400, detail="User name and video title are required")
+        
+        if not suggestion.user_class.strip():
+            raise HTTPException(status_code=400, detail="Class/Standard is required")
+        
+        suggestion_data = VideoSuggestion(
+            user_name=suggestion.user_name,
+            user_class=suggestion.user_class,
+            video_title=suggestion.video_title,
+            video_description=suggestion.video_description or ""
+        )
+        
+        await video_suggestions_collection.insert_one(suggestion_data.dict())
+        return {"message": "Video suggestion submitted successfully", "id": suggestion_data.id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error creating video suggestion: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ==================== BIOTUBE ADMIN ENDPOINTS ====================
+
+# Get biotube dashboard stats (admin only)
+@api_router.get("/admin/biotube/dashboard")
+async def get_biotube_dashboard(_: bool = Depends(verify_admin_token)):
+    try:
+        total_videos = await biotube_videos_collection.count_documents({})
+        public_videos = await biotube_videos_collection.count_documents({"visibility": "public"})
+        pending_suggestions = await video_suggestions_collection.count_documents({"status": "pending"})
+        
+        # Get most viewed (by counting if we had view tracking - for now just recently added)
+        recent_videos = await biotube_videos_collection.find().sort("created_at", -1).limit(5).to_list(5)
+        
+        kingdoms = await biotube_videos_collection.distinct("kingdom")
+        
+        recent = []
+        for v in recent_videos:
+            video_copy = {k: v for k, v in v.items() if k != '_id'}
+            recent.append({
+                "id": video_copy.get("id"),
+                "title": video_copy.get("title"),
+                "created_at": video_copy.get("created_at")
+            })
+        
+        return {
+            "total_videos": total_videos,
+            "public_videos": public_videos,
+            "pending_suggestions": pending_suggestions,
+            "categories_count": len(kingdoms),
+            "recently_added": recent
+        }
+    except Exception as e:
+        logging.error(f"Error fetching biotube dashboard: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Add video (admin only)
+@api_router.post("/admin/biotube/videos")
+async def add_biotube_video(video: BiotubVideoCreate, _: bool = Depends(verify_admin_token)):
+    try:
+        # Extract video ID from YouTube URL
+        import re
+        youtube_regex = r'(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)'
+        match = re.search(youtube_regex, video.youtube_url)
+        
+        if not match:
+            raise HTTPException(status_code=400, detail="Invalid YouTube URL")
+        
+        video_id = match.group(1)
+        embed_code = f'<iframe width="100%" height="600" src="https://www.youtube.com/embed/{video_id}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+        
+        # Check for duplicates
+        existing = await biotube_videos_collection.find_one({"youtube_url": video.youtube_url})
+        if existing:
+            raise HTTPException(status_code=400, detail="This YouTube video has already been added")
+        
+        # Get thumbnail - IMPORTANT: Always set a thumbnail URL
+        if video.thumbnail_url and video.thumbnail_url.strip():
+            thumbnail_url = video.thumbnail_url.strip()
+        else:
+            # Auto-generate from YouTube if not provided
+            thumbnail_url = f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+        
+        # Generate QR code for the video page
+        new_video_id = str(uuid.uuid4())
+        qr_url = f"{os.environ.get('FRONTEND_URL', 'http://localhost:3000')}/biotube/watch/{new_video_id}"
+        
+        qr = qrcode.QRCode(version=1, box_size=10, border=2)
+        qr.add_data(qr_url)
+        qr.make(fit=True)
+        
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        img_buffer = io.BytesIO()
+        qr_img.save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        qr_code_base64 = f"data:image/png;base64,{base64.b64encode(img_buffer.getvalue()).decode()}"
+        
+        video_data = BiotubVideo(
+            id=new_video_id,
+            title=video.title,
+            youtube_url=video.youtube_url,
+            embed_code=embed_code,
+            kingdom=video.kingdom,
+            phylum=video.phylum,
+            class_name=video.class_name,
+            species=video.species,
+            description=video.description or "",
+            thumbnail_url=thumbnail_url,
+            qr_code=qr_code_base64
+        )
+        
+        await biotube_videos_collection.insert_one(video_data.dict())
+        return {"message": "Video added successfully", "id": video_data.id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error adding biotube video: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Update video (admin only)
+@api_router.put("/admin/biotube/videos/{video_id}")
+async def update_biotube_video(video_id: str, update_data: BiotubVideoUpdate, _: bool = Depends(verify_admin_token)):
+    try:
+        video = await biotube_videos_collection.find_one({"id": video_id})
+        if not video:
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
+        update_dict["updated_at"] = datetime.utcnow().isoformat()
+        
+        await biotube_videos_collection.update_one({"id": video_id}, {"$set": update_dict})
+        return {"message": "Video updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating biotube video: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Delete video (admin only)
+@api_router.delete("/admin/biotube/videos/{video_id}")
+async def delete_biotube_video(video_id: str, _: bool = Depends(verify_admin_token)):
+    try:
+        result = await biotube_videos_collection.delete_one({"id": video_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Video not found")
+        return {"message": "Video deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error deleting biotube video: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get all videos for admin (including private)
+@api_router.get("/admin/biotube/videos")
+async def get_admin_biotube_videos(_: bool = Depends(verify_admin_token)):
+    try:
+        videos = await biotube_videos_collection.find().sort("created_at", -1).to_list(1000)
+        result = []
+        for video in videos:
+            video_copy = {k: v for k, v in video.items() if k != '_id'}
+            result.append(BiotubVideo(**video_copy))
+        return result
+    except Exception as e:
+        logging.error(f"Error fetching admin biotube videos: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get video suggestions (admin only)
+@api_router.get("/admin/biotube/suggestions")
+async def get_video_suggestions(status: Optional[str] = None, _: bool = Depends(verify_admin_token)):
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        
+        suggestions = await video_suggestions_collection.find(query).sort("created_at", -1).to_list(1000)
+        logging.info(f"[Biotube] Found {len(suggestions)} suggestions in database")
+        
+        result = []
+        for i, sugg in enumerate(suggestions):
+            try:
+                sugg_copy = {k: v for k, v in sugg.items() if k != '_id'}
+                # Convert to model and back to dict to ensure proper serialization
+                sugg_obj = VideoSuggestion(**sugg_copy)
+                result.append(sugg_obj.dict())
+            except Exception as item_error:
+                logging.error(f"[Biotube] Error processing suggestion {i}: {item_error}")
+                logging.error(f"[Biotube] Suggestion data: {sugg}")
+                # Skip this suggestion and continue
+                continue
+        
+        logging.info(f"[Biotube] Returning {len(result)} processed suggestions")
+        return result
+    except Exception as e:
+        logging.error(f"[Biotube] Error fetching video suggestions: {e}")
+        import traceback
+        logging.error(f"[Biotube] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Update suggestion status (admin only)
+@api_router.put("/admin/biotube/suggestions/{suggestion_id}/status")
+async def update_video_suggestion_status(suggestion_id: str, new_status: str = Query(...), _: bool = Depends(verify_admin_token)):
+    try:
+        if new_status not in ["pending", "reviewed", "added", "dismissed"]:
+            raise HTTPException(status_code=400, detail="Invalid status")
+        
+        result = await video_suggestions_collection.update_one(
+            {"id": suggestion_id},
+            {"$set": {"status": new_status, "updated_at": datetime.utcnow().isoformat()}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Suggestion not found")
+        
+        return {"message": f"Suggestion status updated to {new_status}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating suggestion status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get user suggestion history (admin only)
+@api_router.get("/admin/biotube/user-history/{user_name}")
+async def get_user_suggestion_history(user_name: str, _: bool = Depends(verify_admin_token)):
+    try:
+        suggestions = await video_suggestions_collection.find({"user_name": {"$regex": f"^{user_name}$", "$options": "i"}}).sort("created_at", -1).to_list(1000)
+        result = []
+        for sugg in suggestions:
+            sugg_copy = {k: v for k, v in sugg.items() if k != '_id'}
+            result.append(VideoSuggestion(**sugg_copy))
+        return result
+    except Exception as e:
+        logging.error(f"Error fetching user history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get all user suggestion history (admin only)
+@api_router.get("/admin/biotube/user-history")
+async def get_all_user_suggestion_history(_: bool = Depends(verify_admin_token)):
+    try:
+        suggestions = await video_suggestions_collection.find().sort("created_at", -1).to_list(10000)
+        logging.info(f"[Biotube] Found {len(suggestions)} total suggestions for history")
+        
+        # Group by user_name
+        history_dict = {}
+        for sugg in suggestions:
+            user = sugg.get("user_name", "Unknown")
+            if user not in history_dict:
+                history_dict[user] = []
+            sugg_copy = {k: v for k, v in sugg.items() if k != '_id'}
+            history_dict[user].append(sugg_copy)
+        
+        logging.info(f"[Biotube] Grouped suggestions into {len(history_dict)} users")
+        return history_dict
+    except Exception as e:
+        logging.error(f"[Biotube] Error fetching all user history: {e}")
+        import traceback
+        logging.error(f"[Biotube] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/admin/biotube/suggestions/{suggestion_id}")
+async def delete_suggestion(suggestion_id: str, _: bool = Depends(verify_admin_token)):
+    try:
+        result = await video_suggestions_collection.delete_one({"id": suggestion_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Suggestion not found")
+        return {"message": "Suggestion deleted successfully"}
+    except Exception as e:
+        logging.error(f"Error deleting suggestion: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= VIDEO COMMENTS ENDPOINTS =============
+
+# Get comments for a video
+@api_router.get("/biotube/videos/{video_id}/comments")
+async def get_video_comments(video_id: str):
+    try:
+        comments = await video_comments_collection.find({"video_id": video_id}).sort("created_at", -1).to_list(1000)
+        result = []
+        for comment in comments:
+            comment_copy = {k: v for k, v in comment.items() if k != '_id'}
+            result.append(VideoComment(**comment_copy))
+        return result
+    except Exception as e:
+        logging.error(f"Error fetching comments: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Post a comment on a video
+@api_router.post("/biotube/videos/{video_id}/comments")
+async def post_video_comment(video_id: str, comment: VideoCommentCreate):
+    try:
+        # Verify video exists
+        video = await biotube_videos_collection.find_one({"id": video_id, "visibility": "public"})
+        if not video:
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        new_comment = VideoComment(
+            video_id=video_id,
+            user_name=comment.user_name,
+            user_class=comment.user_class,
+            text=comment.text
+        )
+        
+        await video_comments_collection.insert_one(new_comment.dict())
+        return {"message": "Comment posted successfully", "id": new_comment.id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error posting comment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Delete a comment (admin only)
+@api_router.delete("/admin/biotube/comments/{comment_id}")
+async def delete_video_comment(comment_id: str, _: bool = Depends(verify_admin_token)):
+    try:
+        result = await video_comments_collection.delete_one({"id": comment_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Comment not found")
+        return {"message": "Comment deleted successfully"}
+    except Exception as e:
+        logging.error(f"Error deleting comment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Like a comment
+@api_router.put("/biotube/comments/{comment_id}/like")
+async def like_video_comment(comment_id: str):
+    try:
+        result = await video_comments_collection.update_one(
+            {"id": comment_id},
+            {"$inc": {"likes": 1}}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Comment not found")
+        return {"message": "Comment liked successfully"}
+    except Exception as e:
+        logging.error(f"Error liking comment: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 app.include_router(api_router)
