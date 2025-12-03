@@ -1,6 +1,6 @@
 {
-  "buildCommand": "cd frontend && npm run build",
-  "outputDirectory": "frontend/build",
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
   "env": {
     "REACT_APP_BACKEND_URL": "https://biomuseum.onrender.com"
   },
