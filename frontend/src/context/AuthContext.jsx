@@ -1,5 +1,11 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (
+  window.location.hostname.includes('vercel.app')
+    ? 'https://biomuseum.onrender.com'
+    : 'http://localhost:8000'
+);
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -17,7 +23,7 @@ export const AuthProvider = ({ children }) => {
         if (savedToken) {
           // Verify token with backend
           try {
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/verify`, {
+            const response = await fetch(`${BACKEND_URL}/api/auth/verify`, {
               method: 'GET',
               headers: {
                 'Authorization': `Bearer ${savedToken}`,
@@ -57,7 +63,7 @@ export const AuthProvider = ({ children }) => {
   // Login function - called after successful Google OAuth
   const login = async (googleToken) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/gmail/login`, {
+      const response = await fetch(`${BACKEND_URL}/api/auth/gmail/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -88,7 +94,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       if (token) {
-        await fetch(`${process.env.REACT_APP_API_URL}/auth/logout`, {
+        await fetch(`${BACKEND_URL}/api/auth/logout`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
