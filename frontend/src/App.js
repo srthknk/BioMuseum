@@ -7,6 +7,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import BiotubeHomepage from './components/BiotubeHomepage';
 import BiotubeVideoPage from './components/BiotubeVideoPage';
 import BiotubeAdminPanel from './components/BiotubeAdminPanel';
+import { AuthProvider } from './context/AuthContext';
 import "./App.css";
 
 // Determine backend URL based on current location
@@ -257,14 +258,8 @@ const Homepage = () => {
             </div>
             <div className="flex gap-2 sm:gap-3 items-center">
               <button
-                onClick={() => navigate('/biotube')}
-                className={`${isDark ? 'bg-purple-700 hover:bg-purple-600 text-purple-100' : 'bg-white hover:bg-gray-100 text-purple-700'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
-              >
-                <i className="fas fa-video"></i> <span className="hidden sm:inline">Biotube</span>
-              </button>
-              <button
                 onClick={() => setShowSuggestionModal(true)}
-                className={`${isDark ? 'bg-blue-700 hover:bg-blue-600 text-blue-100' : 'bg-white hover:bg-gray-100 text-green-700'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
+                className={`${isDark ? 'bg-blue-700 hover:bg-blue-600 text-blue-100' : 'bg-white hover:bg-gray-100 text-blue-700'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
               >
                 <i className="fas fa-lightbulb"></i> <span className="hidden sm:inline">Suggest</span>
               </button>
@@ -310,6 +305,12 @@ const Homepage = () => {
               className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base md:text-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               <i className="fas fa-arrow-right"></i> <span>Explore</span>
+            </button>
+            <button
+              onClick={() => navigate('/biotube')}
+              className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base md:text-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105 ml-3 sm:ml-4"
+            >
+              <i className="fas fa-film"></i> <span>BioTube</span>
             </button>
           </div>
         </div>
@@ -1349,11 +1350,13 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
   const [aiImageLoading, setAiImageLoading] = useState(false);
   const [aiImageOrganism, setAiImageOrganism] = useState('');
 
-  // Auto-fill form when initialData is provided (from camera identification)
+  // Auto-fill form when initialData is provided (from approval or camera identification)
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
       console.log('📥 useEffect triggered with initialData:', initialData);
       
+      // If morphology/physiology/description are already in initialData (from approval),
+      // use them. Otherwise leave empty for AI to fill (from camera)
       const newFormData = {
         name: initialData.name || '',
         scientific_name: initialData.scientific_name || '',
@@ -1366,33 +1369,33 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
           genus: '',
           species: ''
         },
-        morphology: '', // Empty - will be filled by AI agent
-        physiology: '', // Empty - will be filled by AI agent
-        description: '', // Empty - will be filled by AI agent
+        morphology: initialData.morphology || '',
+        physiology: initialData.physiology || '',
+        description: initialData.description || '',
         images: Array.isArray(initialData.images) ? initialData.images : []
       };
       
       console.log('✏️ Setting formData to:', newFormData);
       setFormData(newFormData);
       
-      // Auto-trigger AI agent to generate morphology, physiology, description
-      if (initialData.name) {
+      // Only trigger AI agent if morphology/physiology are empty (camera flow)
+      // Don't trigger if they're already filled (approval flow)
+      if (initialData.name && !initialData.morphology && !initialData.physiology) {
         console.log('🤖 Triggering AI agent for organism:', initialData.name);
         setAiOrganismName(initialData.name);
         // The AI will be triggered in the next useEffect
+      } else if (initialData.morphology && initialData.physiology) {
+        console.log('✅ Morphology and physiology already populated from approval - skipping AI');
+        setShowAiHelper(false);
       }
     } else {
       console.log('⚠️ initialData is empty or null:', initialData);
     }
   }, [initialData]);
 
-  // Auto-trigger AI agent when aiOrganismName is set (from camera)
-  useEffect(() => {
-    if (aiOrganismName.trim() && !aiLoading) {
-      console.log('🤖 Auto-triggering AI agent for:', aiOrganismName);
-      handleAiComplete();
-    }
-  }, [aiOrganismName]);
+  // NOTE: Removed auto-trigger on every character typed
+  // Users should click the "Generate" button to trigger AI analysis
+  // This prevents loading with just one letter (e.g., "D" for "Dog")
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -1510,7 +1513,8 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
         organism_name: aiImageOrganism,
         count: 4
       }, {
-        timeout: 120000 // 2 minute timeout for image generation
+        timeout: 120000, // 2 minute timeout for image generation
+        headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.data.success && response.data.image_urls && response.data.image_urls.length > 0) {
@@ -3202,24 +3206,30 @@ const OrganismsPage = () => {
 };
 
 function App() {
+  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+
   return (
-    <ThemeProvider>
-      <AdminProvider>
-        <div className="App">
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Homepage />} />
-              <Route path="/organisms" element={<OrganismsPage />} />
-              <Route path="/scanner" element={<QRScanner />} />
-              <Route path="/organism/:id" element={<OrganismDetail />} />
-              <Route path="/admin" element={<AdminPanel />} />
-              <Route path="/biotube" element={<BiotubeWrapper />} />
-              <Route path="/biotube/watch/:videoId" element={<BiotubeVideoWrapper />} />
-            </Routes>
-          </BrowserRouter>
-        </div>
-      </AdminProvider>
-    </ThemeProvider>
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <AuthProvider>
+        <ThemeProvider>
+          <AdminProvider>
+            <div className="App">
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Homepage />} />
+                  <Route path="/organisms" element={<OrganismsPage />} />
+                  <Route path="/scanner" element={<QRScanner />} />
+                  <Route path="/organism/:id" element={<OrganismDetail />} />
+                  <Route path="/admin" element={<AdminPanel />} />
+                  <Route path="/biotube" element={<BiotubeWrapper />} />
+                  <Route path="/biotube/watch/:videoId" element={<BiotubeVideoWrapper />} />
+                </Routes>
+              </BrowserRouter>
+            </div>
+          </AdminProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }
 

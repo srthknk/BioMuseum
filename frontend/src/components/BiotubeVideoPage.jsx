@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const BiotubeVideoPage = ({ isDark }) => {
   const { videoId } = useParams();
   const navigate = useNavigate();
+  const { user, isAuthenticated, getAuthHeader } = useAuth();
   const [video, setVideo] = useState(null);
   const [relatedVideos, setRelatedVideos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,6 +15,7 @@ const BiotubeVideoPage = ({ isDark }) => {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentForm, setCommentForm] = useState({ user_name: '', user_class: '', text: '' });
   const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
 
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (
     window.location.hostname.includes('vercel.app')
@@ -31,6 +34,38 @@ const BiotubeVideoPage = ({ isDark }) => {
       fetchComments();
     }
   }, [video]);
+
+  // Check user login status from localStorage (BioTube login)
+  useEffect(() => {
+    const userToken = localStorage.getItem('userToken');
+    const userName = localStorage.getItem('userName');
+    setIsUserLoggedIn(!!userToken && !!userName);
+  }, []);
+
+  // Auto-fill comment form when user logs in
+  useEffect(() => {
+    const userName = localStorage.getItem('userName');
+    const userEmail = localStorage.getItem('userEmail');
+    
+    if (userName && userEmail) {
+      setCommentForm(prev => ({
+        ...prev,
+        user_name: userName,
+        user_class: userEmail
+      }));
+      setIsUserLoggedIn(true);
+    } else if (isAuthenticated && user) {
+      setCommentForm(prev => ({
+        ...prev,
+        user_name: user.name || '',
+        user_class: user.email || ''
+      }));
+      setIsUserLoggedIn(true);
+    } else {
+      setCommentForm({ user_name: '', user_class: '', text: '' });
+      setIsUserLoggedIn(false);
+    }
+  }, [isAuthenticated, user]);
 
   const fetchComments = async () => {
     try {
@@ -240,48 +275,61 @@ const BiotubeVideoPage = ({ isDark }) => {
                 </h2>
 
                 {/* Add Comment Form */}
-                <form onSubmit={handlePostComment} className="mb-8">
-                  <div className={`p-4 rounded-lg mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                      <input
-                        type="text"
-                        placeholder="Your name"
-                        value={commentForm.user_name}
-                        onChange={(e) => setCommentForm({...commentForm, user_name: e.target.value})}
-                        className={`px-3 py-2 rounded border ${
-                          isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
-                        }`}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Your class/grade"
-                        value={commentForm.user_class}
-                        onChange={(e) => setCommentForm({...commentForm, user_class: e.target.value})}
-                        className={`px-3 py-2 rounded border ${
-                          isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
-                        }`}
-                      />
-                    </div>
-                    <textarea
-                      placeholder="Add a comment..."
-                      value={commentForm.text}
-                      onChange={(e) => setCommentForm({...commentForm, text: e.target.value})}
-                      className={`w-full px-3 py-2 rounded border resize-none ${
-                        isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
-                      }`}
-                      rows="3"
-                    />
-                    <div className="flex gap-2 mt-3 justify-end">
-                      <button
-                        type="submit"
-                        disabled={commentSubmitting}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white rounded font-semibold transition-all"
-                      >
-                        {commentSubmitting ? 'Posting...' : 'Post Comment'}
-                      </button>
-                    </div>
+                {!isUserLoggedIn ? (
+                  <div className={`p-4 rounded-lg mb-8 border-2 border-dashed ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-blue-50 border-blue-300'}`}>
+                    <p className={`${isDark ? 'text-gray-300' : 'text-blue-900'} mb-3`}>
+                      🔒 Please log in to comment on this video
+                    </p>
+                    <a href="/biotube" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold inline-block transition-all">
+                      Go to BioTube Login
+                    </a>
                   </div>
-                </form>
+                ) : (
+                  <form onSubmit={handlePostComment} className="mb-8">
+                    <div className={`p-4 rounded-lg mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                        <input
+                          type="text"
+                          placeholder="Your name"
+                          value={commentForm.user_name}
+                          onChange={(e) => setCommentForm({...commentForm, user_name: e.target.value})}
+                          disabled={isUserLoggedIn}
+                          className={`px-3 py-2 rounded border ${
+                            isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                          } ${isUserLoggedIn ? 'opacity-75 cursor-not-allowed' : ''}`}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Your class/grade"
+                          value={commentForm.user_class}
+                          onChange={(e) => setCommentForm({...commentForm, user_class: e.target.value})}
+                          disabled={isUserLoggedIn}
+                          className={`px-3 py-2 rounded border ${
+                            isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                          } ${isUserLoggedIn ? 'opacity-75 cursor-not-allowed' : ''}`}
+                        />
+                      </div>
+                      <textarea
+                        placeholder="Add a comment..."
+                        value={commentForm.text}
+                        onChange={(e) => setCommentForm({...commentForm, text: e.target.value})}
+                        className={`w-full px-3 py-2 rounded border resize-none ${
+                          isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                        }`}
+                        rows="3"
+                      />
+                      <div className="flex gap-2 mt-3 justify-end">
+                        <button
+                          type="submit"
+                          disabled={commentSubmitting}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white rounded font-semibold transition-all"
+                        >
+                          {commentSubmitting ? 'Posting...' : 'Post Comment'}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
 
                 {/* Comments List */}
                 {commentsLoading ? (

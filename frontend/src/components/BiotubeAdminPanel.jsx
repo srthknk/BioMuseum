@@ -7,6 +7,7 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
   const [videos, setVideos] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [userHistory, setUserHistory] = useState({});
+  const [loggedInUsers, setLoggedInUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
@@ -61,6 +62,22 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
           console.error('Error data:', apiError.response?.data);
           setSuggestions([]);
           throw apiError;
+        }
+      } else if (activeTab === 'logged-in-users') {
+        try {
+          const res = await axios.get(`${API}/admin/gmail-users`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const users = Array.isArray(res.data) ? res.data : [];
+          console.log('Fetched users:', users);
+          if (users.length > 0) {
+            console.log('First user sample:', users[0]);
+            console.log('Profile picture field:', users[0].profile_picture);
+          }
+          setLoggedInUsers(users);
+        } catch (apiError) {
+          console.error('❌ Error fetching logged-in users:', apiError);
+          setLoggedInUsers([]);
         }
       } else if (activeTab === 'history') {
         const res = await axios.get(`${API}/admin/biotube/user-history`, {
@@ -176,10 +193,10 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
       <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            🎬 Biotube Admin Panel
+            🎬 BioTube Admin Panel
           </h1>
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Manage videos, suggestions, and user content
+            Manage Videos, Suggestions, and User Content
           </p>
         </div>
       </div>
@@ -192,6 +209,7 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
             { id: 'add', label: '➕ Add Video' },
             { id: 'manage', label: '📝 Manage Videos' },
             { id: 'suggestions', label: '💡 Suggestions' },
+            { id: 'logged-in-users', label: '👤 Logged-in Users' },
             { id: 'history', label: '👥 User History' }
           ].map(tab => (
             <button
@@ -441,13 +459,16 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
                         }`}
                       >
                         {/* Thumbnail */}
-                        <div className="relative bg-black aspect-video overflow-hidden">
+                        <div className="relative bg-gray-900 aspect-video overflow-hidden flex items-center justify-center">
                           <img
-                            src={video.thumbnail_url || 'https://via.placeholder.com/320x180?text=No+Thumbnail'}
+                            src={video.thumbnail_url || 'https://via.placeholder.com/320x180?text=No%20Thumbnail'}
                             alt={video.title}
                             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
                             onError={(e) => {
-                              e.target.src = 'https://via.placeholder.com/320x180?text=Thumbnail';
+                              console.warn(`Failed to load thumbnail for: ${video.title}`);
+                              e.target.src = 'https://via.placeholder.com/320x180?text=Video%20Thumbnail';
+                              e.target.style.backgroundColor = '#1f2937';
                             }}
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all flex items-center justify-center">
@@ -585,6 +606,88 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
                     <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'} mt-2`}>
                       💡 Go to the Biotube home page and click "Suggest Video" to submit suggestions
                     </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* LOGGED-IN USERS TAB */}
+            {activeTab === 'logged-in-users' && (
+              <div className="space-y-6">
+                {loading ? (
+                  <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                    <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Loading...</p>
+                  </div>
+                ) : loggedInUsers.length === 0 ? (
+                  <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                    <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>No logged-in users yet</p>
+                  </div>
+                ) : (
+                  <div className={`rounded-lg overflow-hidden border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                          <tr>
+                            <th className={`px-6 py-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Profile</th>
+                            <th className={`px-6 py-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Email</th>
+                            <th className={`px-6 py-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Login Time</th>
+                            <th className={`px-6 py-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Last Active</th>
+                            <th className={`px-6 py-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                          {loggedInUsers.map((user) => (
+                            <tr key={user.id} className={isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}>
+                              <td className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                                <div className="flex items-center gap-3">
+                                  {user.profile_picture && user.profile_picture.trim() ? (
+                                    <img
+                                      src={user.profile_picture}
+                                      alt={user.name || 'User'}
+                                      className="w-10 h-10 rounded-full object-cover border border-gray-500"
+                                      onError={(e) => {
+                                        console.warn(`Failed to load profile pic for: ${user.email}`);
+                                        e.target.style.display = 'none';
+                                        e.target.nextElementSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div
+                                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${
+                                      !user.profile_picture || !user.profile_picture.trim()
+                                        ? ''
+                                        : 'hidden'
+                                    } ${isDark ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gradient-to-r from-blue-400 to-purple-400 text-white'}`}
+                                  >
+                                    {(user.name || 'U').charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span className="font-semibold block">{user.name || 'Unknown'}</span>
+                                    <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>via Google</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{user.email}</td>
+                              <td className={`px-6 py-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {new Date(user.login_timestamp).toLocaleString()}
+                              </td>
+                              <td className={`px-6 py-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                                {new Date(user.last_active).toLocaleString()}
+                              </td>
+                              <td className={`px-6 py-4`}>
+                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                  user.is_active
+                                    ? isDark ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800'
+                                    : isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
+                                }`}>
+                                  {user.is_active ? '🟢 Active' : '⚫ Inactive'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
