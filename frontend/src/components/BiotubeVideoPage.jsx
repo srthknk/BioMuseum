@@ -15,7 +15,6 @@ const BiotubeVideoPage = ({ isDark }) => {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentForm, setCommentForm] = useState({ user_name: '', user_class: '', text: '' });
   const [commentSubmitting, setCommentSubmitting] = useState(false);
-  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
 
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (
     window.location.hostname.includes('vercel.app')
@@ -35,35 +34,16 @@ const BiotubeVideoPage = ({ isDark }) => {
     }
   }, [video]);
 
-  // Check user login status from localStorage (BioTube login)
-  useEffect(() => {
-    const userToken = localStorage.getItem('userToken');
-    const userName = localStorage.getItem('userName');
-    setIsUserLoggedIn(!!userToken && !!userName);
-  }, []);
-
   // Auto-fill comment form when user logs in
   useEffect(() => {
-    const userName = localStorage.getItem('userName');
-    const userEmail = localStorage.getItem('userEmail');
-    
-    if (userName && userEmail) {
-      setCommentForm(prev => ({
-        ...prev,
-        user_name: userName,
-        user_class: userEmail
-      }));
-      setIsUserLoggedIn(true);
-    } else if (isAuthenticated && user) {
+    if (isAuthenticated && user) {
       setCommentForm(prev => ({
         ...prev,
         user_name: user.name || '',
         user_class: user.email || ''
       }));
-      setIsUserLoggedIn(true);
     } else {
       setCommentForm({ user_name: '', user_class: '', text: '' });
-      setIsUserLoggedIn(false);
     }
   }, [isAuthenticated, user]);
 
@@ -275,13 +255,13 @@ const BiotubeVideoPage = ({ isDark }) => {
                 </h2>
 
                 {/* Add Comment Form */}
-                {!isUserLoggedIn ? (
+                {!isAuthenticated ? (
                   <div className={`p-4 rounded-lg mb-8 border-2 border-dashed ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-blue-50 border-blue-300'}`}>
                     <p className={`${isDark ? 'text-gray-300' : 'text-blue-900'} mb-3`}>
                       🔒 Please log in to comment on this video
                     </p>
-                    <a href="/biotube" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold inline-block transition-all">
-                      Go to BioTube Login
+                    <a href="/" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold inline-block transition-all">
+                      Go to Login
                     </a>
                   </div>
                 ) : (
@@ -293,20 +273,20 @@ const BiotubeVideoPage = ({ isDark }) => {
                           placeholder="Your name"
                           value={commentForm.user_name}
                           onChange={(e) => setCommentForm({...commentForm, user_name: e.target.value})}
-                          disabled={isUserLoggedIn}
+                          disabled={isAuthenticated}
                           className={`px-3 py-2 rounded border ${
                             isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
-                          } ${isUserLoggedIn ? 'opacity-75 cursor-not-allowed' : ''}`}
+                          } ${isAuthenticated ? 'opacity-75 cursor-not-allowed' : ''}`}
                         />
                         <input
                           type="text"
                           placeholder="Your class/grade"
                           value={commentForm.user_class}
                           onChange={(e) => setCommentForm({...commentForm, user_class: e.target.value})}
-                          disabled={isUserLoggedIn}
+                          disabled={isAuthenticated}
                           className={`px-3 py-2 rounded border ${
                             isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
-                          } ${isUserLoggedIn ? 'opacity-75 cursor-not-allowed' : ''}`}
+                          } ${isAuthenticated ? 'opacity-75 cursor-not-allowed' : ''}`}
                         />
                       </div>
                       <textarea

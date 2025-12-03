@@ -68,13 +68,7 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
           const res = await axios.get(`${API}/admin/gmail-users`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          const users = Array.isArray(res.data) ? res.data : [];
-          console.log('Fetched users:', users);
-          if (users.length > 0) {
-            console.log('First user sample:', users[0]);
-            console.log('Profile picture field:', users[0].profile_picture);
-          }
-          setLoggedInUsers(users);
+          setLoggedInUsers(Array.isArray(res.data) ? res.data : []);
         } catch (apiError) {
           console.error('❌ Error fetching logged-in users:', apiError);
           setLoggedInUsers([]);
@@ -459,16 +453,13 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
                         }`}
                       >
                         {/* Thumbnail */}
-                        <div className="relative bg-gray-900 aspect-video overflow-hidden flex items-center justify-center">
+                        <div className="relative bg-black aspect-video overflow-hidden">
                           <img
-                            src={video.thumbnail_url || 'https://via.placeholder.com/320x180?text=No%20Thumbnail'}
+                            src={video.thumbnail_url || 'https://via.placeholder.com/320x180?text=No+Thumbnail'}
                             alt={video.title}
                             className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                            loading="lazy"
                             onError={(e) => {
-                              console.warn(`Failed to load thumbnail for: ${video.title}`);
-                              e.target.src = 'https://via.placeholder.com/320x180?text=Video%20Thumbnail';
-                              e.target.style.backgroundColor = '#1f2937';
+                              e.target.src = 'https://via.placeholder.com/320x180?text=Thumbnail';
                             }}
                           />
                           <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all flex items-center justify-center">
@@ -640,31 +631,18 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
                             <tr key={user.id} className={isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}>
                               <td className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                                 <div className="flex items-center gap-3">
-                                  {user.profile_picture && user.profile_picture.trim() ? (
+                                  {user.profile_picture ? (
                                     <img
                                       src={user.profile_picture}
-                                      alt={user.name || 'User'}
-                                      className="w-10 h-10 rounded-full object-cover border border-gray-500"
-                                      onError={(e) => {
-                                        console.warn(`Failed to load profile pic for: ${user.email}`);
-                                        e.target.style.display = 'none';
-                                        e.target.nextElementSibling.style.display = 'flex';
-                                      }}
+                                      alt={user.name}
+                                      className="w-10 h-10 rounded-full object-cover"
                                     />
-                                  ) : null}
-                                  <div
-                                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold flex-shrink-0 ${
-                                      !user.profile_picture || !user.profile_picture.trim()
-                                        ? ''
-                                        : 'hidden'
-                                    } ${isDark ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white' : 'bg-gradient-to-r from-blue-400 to-purple-400 text-white'}`}
-                                  >
-                                    {(user.name || 'U').charAt(0).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <span className="font-semibold block">{user.name || 'Unknown'}</span>
-                                    <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>via Google</span>
-                                  </div>
+                                  ) : (
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-300 text-gray-700'}`}>
+                                      {user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
+                                  <span className="font-semibold">{user.name}</span>
                                 </div>
                               </td>
                               <td className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{user.email}</td>

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Query, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -10,7 +10,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 import qrcode
 import io
 import base64
@@ -21,6 +21,7 @@ import ssl
 import asyncio
 import socket
 import dns.resolver
+import jwt
 
 # Google Generative AI - with graceful fallback
 try:
@@ -56,10 +57,11 @@ suggestions_collection = None
 biotube_videos_collection = None
 video_suggestions_collection = None
 video_comments_collection = None
+gmail_users_collection = None
 mongodb_connected = False
 
 async def init_mongodb():
-    global db, organisms_collection, suggestions_collection, biotube_videos_collection, video_suggestions_collection, video_comments_collection, mongodb_connected
+    global db, organisms_collection, suggestions_collection, biotube_videos_collection, video_suggestions_collection, video_comments_collection, gmail_users_collection, mongodb_connected
     max_retries = 15  # Increased from 10 to 15
     retry_count = 0
     
@@ -105,6 +107,7 @@ async def init_mongodb():
             biotube_videos_collection = db.biotube_videos
             video_suggestions_collection = db.video_suggestions
             video_comments_collection = db.video_comments
+            gmail_users_collection = db.gmail_users
             
             # Test that we can actually query
             test_count = await organisms_collection.count_documents({})
@@ -206,6 +209,37 @@ class AdminLogin(BaseModel):
 class AdminToken(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+# Gmail User Models
+class GmailUserCreate(BaseModel):
+    email: str
+    name: str
+    profile_picture: Optional[str] = None
+    google_id: str
+
+class GmailUser(GmailUserCreate):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    login_timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    last_active: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    is_active: bool = True
+    jwt_token: Optional[str] = None
+
+class GmailUserResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    profile_picture: Optional[str] = None
+    login_timestamp: str
+    last_active: str
+    is_active: bool
+
+class GoogleLoginRequest(BaseModel):
+    token: str  # Google ID token from frontend
+
+class GoogleLoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: GmailUserResponse
 
 class Suggestion(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -358,6 +392,34 @@ def verify_admin_token(credentials: HTTPAuthorizationCredentials = Depends(secur
     
     # If no token matches, raise error
     raise HTTPException(status_code=401, detail="Invalid admin token")
+
+def verify_gmail_token(authorization: str = Header(None)):
+    """
+    Verify Gmail JWT token and return user info.
+    Used for protecting authenticated endpoints.
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing authorization header")
+    
+    try:
+        parts = authorization.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        
+        token = parts[1]
+        
+        try:
+            payload = jwt.decode(token, os.environ.get("JWT_SECRET_KEY", "biomuseum-secret"), algorithms=["HS256"])
+            return payload
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Token expired")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Token verification error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid authorization")
 
 # Create app and router
 app = FastAPI()
@@ -915,6 +977,231 @@ async def google_login(request: dict):
     except Exception as e:
         logging.error(f"Google login error: {e}")
         raise HTTPException(status_code=500, detail=f"Google login failed: {str(e)}")
+
+# ==================== GMAIL USER AUTHENTICATION ====================
+@api_router.post("/auth/gmail/login", response_model=GoogleLoginResponse)
+async def gmail_login(request: GoogleLoginRequest):
+    """
+    Authenticate user with Google ID token.
+    Creates or updates user record in MongoDB.
+    Returns JWT token for subsequent requests.
+    """
+    try:
+        from google.auth.transport import requests as google_requests
+        from google.oauth2 import id_token
+        
+        # Get Google Client ID from environment
+        google_client_id = os.environ.get('GOOGLE_CLIENT_ID')
+        if not google_client_id:
+            raise HTTPException(status_code=503, detail="Google OAuth not configured")
+        
+        # Verify the token
+        try:
+            idinfo = id_token.verify_oauth2_token(request.token, google_requests.Request(), google_client_id)
+        except ValueError as e:
+            logging.error(f"Invalid Google token: {e}")
+            raise HTTPException(status_code=401, detail="Invalid Google token")
+        
+        # Extract user info
+        email = idinfo.get('email', '').strip().lower()
+        name = idinfo.get('name', '')
+        picture = idinfo.get('picture', '')
+        google_id = idinfo.get('sub', '')  # Google's unique user ID
+        
+        if not email or not google_id:
+            raise HTTPException(status_code=400, detail="Missing required info in Google token")
+        
+        # Check if user exists
+        existing_user = await gmail_users_collection.find_one({"email": email})
+        
+        if existing_user:
+            # Update last_active timestamp
+            await gmail_users_collection.update_one(
+                {"email": email},
+                {
+                    "$set": {
+                        "last_active": datetime.utcnow().isoformat(),
+                        "is_active": True,
+                        "profile_picture": picture,  # Update picture in case it changed
+                        "name": name  # Update name in case it changed
+                    }
+                }
+            )
+            user_record = await gmail_users_collection.find_one({"email": email})
+        else:
+            # Create new user
+            new_user = GmailUser(
+                email=email,
+                name=name,
+                profile_picture=picture,
+                google_id=google_id
+            )
+            await gmail_users_collection.insert_one(new_user.model_dump())
+            user_record = await gmail_users_collection.find_one({"email": email})
+        
+        # Generate JWT token
+        payload = {
+            "sub": user_record["id"],
+            "email": email,
+            "name": name,
+            "exp": datetime.utcnow() + timedelta(days=30)  # 30-day expiration
+        }
+        jwt_token = jwt.encode(payload, os.environ.get("JWT_SECRET_KEY", "biomuseum-secret"), algorithm="HS256")
+        
+        # Update token in database
+        await gmail_users_collection.update_one(
+            {"email": email},
+            {"$set": {"jwt_token": jwt_token}}
+        )
+        
+        user_response = GmailUserResponse(
+            id=user_record["id"],
+            email=email,
+            name=name,
+            profile_picture=picture,
+            login_timestamp=user_record["login_timestamp"],
+            last_active=user_record["last_active"],
+            is_active=True
+        )
+        
+        return GoogleLoginResponse(
+            access_token=jwt_token,
+            user=user_response
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Gmail login error: {e}")
+        raise HTTPException(status_code=500, detail=f"Gmail login failed: {str(e)}")
+
+@api_router.get("/auth/verify")
+async def verify_token(authorization: str = Header(None)):
+    """
+    Verify JWT token and return user info.
+    """
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Missing authorization header")
+        
+        # Extract token from "Bearer <token>"
+        parts = authorization.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        
+        token = parts[1]
+        
+        # Verify token
+        try:
+            payload = jwt.decode(token, os.environ.get("JWT_SECRET_KEY", "biomuseum-secret"), algorithms=["HS256"])
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Token expired")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        # Get user from database
+        user = await gmail_users_collection.find_one({"id": payload["sub"]})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Update last_active
+        await gmail_users_collection.update_one(
+            {"id": user["id"]},
+            {"$set": {"last_active": datetime.utcnow().isoformat()}}
+        )
+        
+        return GmailUserResponse(
+            id=user["id"],
+            email=user["email"],
+            name=user["name"],
+            profile_picture=user.get("profile_picture"),
+            login_timestamp=user["login_timestamp"],
+            last_active=user["last_active"],
+            is_active=user.get("is_active", True)
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Token verification error: {e}")
+        raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
+
+@api_router.get("/auth/user")
+async def get_current_user(authorization: str = Header(None)):
+    """
+    Get current authenticated user info.
+    """
+    try:
+        if not authorization:
+            return None
+        
+        parts = authorization.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            return None
+        
+        token = parts[1]
+        
+        try:
+            payload = jwt.decode(token, os.environ.get("JWT_SECRET_KEY", "biomuseum-secret"), algorithms=["HS256"])
+        except:
+            return None
+        
+        user = await gmail_users_collection.find_one({"id": payload["sub"]})
+        if not user:
+            return None
+        
+        return GmailUserResponse(
+            id=user["id"],
+            email=user["email"],
+            name=user["name"],
+            profile_picture=user.get("profile_picture"),
+            login_timestamp=user["login_timestamp"],
+            last_active=user["last_active"],
+            is_active=user.get("is_active", True)
+        )
+    
+    except Exception as e:
+        logging.error(f"Get user error: {e}")
+        return None
+
+@api_router.post("/auth/logout")
+async def logout(authorization: str = Header(None)):
+    """
+    Mark user as inactive (logout).
+    """
+    try:
+        if not authorization:
+            raise HTTPException(status_code=401, detail="Missing authorization header")
+        
+        parts = authorization.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        
+        token = parts[1]
+        
+        try:
+            payload = jwt.decode(token, os.environ.get("JWT_SECRET_KEY", "biomuseum-secret"), algorithms=["HS256"])
+        except:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        # Mark user as inactive
+        result = await gmail_users_collection.update_one(
+            {"id": payload["sub"]},
+            {"$set": {"is_active": False, "jwt_token": None}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return {"message": "Successfully logged out"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Logout error: {e}")
+        raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
+
+# ==================== END GMAIL USER AUTHENTICATION ====================
 
 @api_router.post("/admin/organisms", response_model=Organism)
 async def create_organism(organism: OrganismCreate, _: bool = Depends(verify_admin_token)):
@@ -1704,6 +1991,27 @@ async def get_all_user_suggestion_history(_: bool = Depends(verify_admin_token))
         logging.error(f"[Biotube] Error fetching all user history: {e}")
         import traceback
         logging.error(f"[Biotube] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/gmail-users")
+async def get_all_gmail_users(_: bool = Depends(verify_admin_token)):
+    """
+    Get all logged-in Gmail users for admin panel.
+    Shows email, name, profile pic, login time, last active, and status.
+    """
+    try:
+        users = await gmail_users_collection.find().sort("login_timestamp", -1).to_list(1000)
+        
+        # Remove MongoDB's _id field and return clean data
+        users_list = []
+        for user in users:
+            user_copy = {k: v for k, v in user.items() if k != '_id'}
+            users_list.append(user_copy)
+        
+        logging.info(f"[Auth] Fetched {len(users_list)} Gmail users for admin panel")
+        return users_list
+    except Exception as e:
+        logging.error(f"[Auth] Error fetching Gmail users: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.delete("/admin/biotube/suggestions/{suggestion_id}")
