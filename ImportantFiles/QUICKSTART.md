@@ -101,8 +101,8 @@ npm install --legacy-peer-deps
 
 **Terminal 1 - Start Backend:**
 ```powershell
-cd d:\BioMuseum\backend
-d:\BioMuseum\.venv\Scripts\python.exe -m uvicorn server:app --reload --host 0.0.0.0 --port 8000
+cd c:\BioMuseum\backend
+c:\BioMuseum\.venv\Scripts\python.exe -m uvicorn server:app --reload --host 0.0.0.0 --port 8000
 ```
 
 You should see:
