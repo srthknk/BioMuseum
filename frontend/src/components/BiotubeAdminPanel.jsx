@@ -7,7 +7,6 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
   const [videos, setVideos] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [userHistory, setUserHistory] = useState({});
-  const [loggedInUsers, setLoggedInUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: '',
@@ -62,16 +61,6 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
           console.error('Error data:', apiError.response?.data);
           setSuggestions([]);
           throw apiError;
-        }
-      } else if (activeTab === 'logged-in-users') {
-        try {
-          const res = await axios.get(`${API}/admin/gmail-users`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setLoggedInUsers(Array.isArray(res.data) ? res.data : []);
-        } catch (apiError) {
-          console.error('❌ Error fetching logged-in users:', apiError);
-          setLoggedInUsers([]);
         }
       } else if (activeTab === 'history') {
         const res = await axios.get(`${API}/admin/biotube/user-history`, {
@@ -203,7 +192,6 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
             { id: 'add', label: '➕ Add Video' },
             { id: 'manage', label: '📝 Manage Videos' },
             { id: 'suggestions', label: '💡 Suggestions' },
-            { id: 'logged-in-users', label: '👤 Logged-in Users' },
             { id: 'history', label: '👥 User History' }
           ].map(tab => (
             <button
@@ -597,75 +585,6 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
                     <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'} mt-2`}>
                       💡 Go to the Biotube home page and click "Suggest Video" to submit suggestions
                     </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* LOGGED-IN USERS TAB */}
-            {activeTab === 'logged-in-users' && (
-              <div className="space-y-6">
-                {loading ? (
-                  <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                    <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Loading...</p>
-                  </div>
-                ) : loggedInUsers.length === 0 ? (
-                  <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                    <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>No logged-in users yet</p>
-                  </div>
-                ) : (
-                  <div className={`rounded-lg overflow-hidden border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className={`${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                          <tr>
-                            <th className={`px-6 py-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Profile</th>
-                            <th className={`px-6 py-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Email</th>
-                            <th className={`px-6 py-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Login Time</th>
-                            <th className={`px-6 py-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Last Active</th>
-                            <th className={`px-6 py-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                          {loggedInUsers.map((user) => (
-                            <tr key={user.id} className={isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'}>
-                              <td className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                                <div className="flex items-center gap-3">
-                                  {user.profile_picture ? (
-                                    <img
-                                      src={user.profile_picture}
-                                      alt={user.name}
-                                      className="w-10 h-10 rounded-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-300 text-gray-700'}`}>
-                                      {user.name.charAt(0).toUpperCase()}
-                                    </div>
-                                  )}
-                                  <span className="font-semibold">{user.name}</span>
-                                </div>
-                              </td>
-                              <td className={`px-6 py-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{user.email}</td>
-                              <td className={`px-6 py-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                {new Date(user.login_timestamp).toLocaleString()}
-                              </td>
-                              <td className={`px-6 py-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                                {new Date(user.last_active).toLocaleString()}
-                              </td>
-                              <td className={`px-6 py-4`}>
-                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                  user.is_active
-                                    ? isDark ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800'
-                                    : isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600'
-                                }`}>
-                                  {user.is_active ? '🟢 Active' : '⚫ Inactive'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
                   </div>
                 )}
               </div>

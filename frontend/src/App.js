@@ -306,12 +306,20 @@ const Homepage = () => {
             <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed drop-shadow-md">
               Discover the wonders of life science through our interactive biology museum. Learn about diverse organisms and their fascinating characteristics.
             </p>
-            <button
-              onClick={() => navigate('/organisms')}
-              className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base md:text-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              <i className="fas fa-arrow-right"></i> <span>Explore</span>
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+              <button
+                onClick={() => navigate('/organisms')}
+                className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base md:text-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <i className="fas fa-arrow-right"></i> <span>Explore</span>
+              </button>
+              <button
+                onClick={() => navigate('/biotube')}
+                className="bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base md:text-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <i className="fas fa-video"></i> <span>BioTube</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
