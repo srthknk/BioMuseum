@@ -254,62 +254,49 @@ const BiotubeVideoPage = ({ isDark }) => {
                   💬 Comments ({comments.length})
                 </h2>
 
-                {/* Add Comment Form */}
-                {!isAuthenticated ? (
-                  <div className={`p-4 rounded-lg mb-8 border-2 border-dashed ${isDark ? 'bg-gray-700 border-gray-600' : 'bg-blue-50 border-blue-300'}`}>
-                    <p className={`${isDark ? 'text-gray-300' : 'text-blue-900'} mb-3`}>
-                      🔒 Please log in to comment on this video
-                    </p>
-                    <a href="/" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold inline-block transition-all">
-                      Go to Login
-                    </a>
-                  </div>
-                ) : (
-                  <form onSubmit={handlePostComment} className="mb-8">
-                    <div className={`p-4 rounded-lg mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                        <input
-                          type="text"
-                          placeholder="Your name"
-                          value={commentForm.user_name}
-                          onChange={(e) => setCommentForm({...commentForm, user_name: e.target.value})}
-                          disabled={isAuthenticated}
-                          className={`px-3 py-2 rounded border ${
-                            isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
-                          } ${isAuthenticated ? 'opacity-75 cursor-not-allowed' : ''}`}
-                        />
-                        <input
-                          type="text"
-                          placeholder="Your class/grade"
-                          value={commentForm.user_class}
-                          onChange={(e) => setCommentForm({...commentForm, user_class: e.target.value})}
-                          disabled={isAuthenticated}
-                          className={`px-3 py-2 rounded border ${
-                            isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
-                          } ${isAuthenticated ? 'opacity-75 cursor-not-allowed' : ''}`}
-                        />
-                      </div>
-                      <textarea
-                        placeholder="Add a comment..."
-                        value={commentForm.text}
-                        onChange={(e) => setCommentForm({...commentForm, text: e.target.value})}
-                        className={`w-full px-3 py-2 rounded border resize-none ${
+                {/* Add Comment Form - Always visible */}
+                <form onSubmit={handlePostComment} className="mb-8">
+                  <div className={`p-4 rounded-lg mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                      <input
+                        type="text"
+                        placeholder="Your name"
+                        value={commentForm.user_name}
+                        onChange={(e) => setCommentForm({...commentForm, user_name: e.target.value})}
+                        className={`px-3 py-2 rounded border ${
                           isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
                         }`}
-                        rows="3"
                       />
-                      <div className="flex gap-2 mt-3 justify-end">
-                        <button
-                          type="submit"
-                          disabled={commentSubmitting}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white rounded font-semibold transition-all"
-                        >
-                          {commentSubmitting ? 'Posting...' : 'Post Comment'}
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        placeholder="Your class/grade"
+                        value={commentForm.user_class}
+                        onChange={(e) => setCommentForm({...commentForm, user_class: e.target.value})}
+                        className={`px-3 py-2 rounded border ${
+                          isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                        }`}
+                      />
                     </div>
-                  </form>
-                )}
+                    <textarea
+                      placeholder="Add a comment..."
+                      value={commentForm.text}
+                      onChange={(e) => setCommentForm({...commentForm, text: e.target.value})}
+                      className={`w-full px-3 py-2 rounded border resize-none ${
+                        isDark ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300'
+                      }`}
+                      rows="3"
+                    />
+                    <div className="flex gap-2 mt-3 justify-end">
+                      <button
+                        type="submit"
+                        disabled={commentSubmitting}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white rounded font-semibold transition-all"
+                      >
+                        {commentSubmitting ? 'Posting...' : 'Post Comment'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
 
                 {/* Comments List */}
                 {commentsLoading ? (
