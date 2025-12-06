@@ -1387,13 +1387,13 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
     }
   }, [initialData]);
 
-  // Auto-trigger AI agent when aiOrganismName is set (from camera)
+  // Auto-trigger AI agent when aiOrganismName is set (from camera - only if name is long enough)
   useEffect(() => {
-    if (aiOrganismName.trim() && !aiLoading) {
-      console.log('🤖 Auto-triggering AI agent for:', aiOrganismName);
+    if (aiOrganismName.trim().length >= 3 && !aiLoading && isFromCameraFlow) {
+      console.log('🤖 Auto-triggering AI agent for camera flow:', aiOrganismName);
       handleAiComplete();
     }
-  }, [aiOrganismName]);
+  }, [aiOrganismName, isFromCameraFlow]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -1511,6 +1511,9 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
         organism_name: aiImageOrganism,
         count: 4
       }, {
+        headers: {
+          Authorization: `Bearer ${token}` // Include admin token for authentication
+        },
         timeout: 120000 // 2 minute timeout for image generation
       });
 

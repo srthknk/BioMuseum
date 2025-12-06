@@ -426,20 +426,76 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # Async function to fetch images from web
-async def get_images_from_web_async(organism_name: str, max_images: int = 5) -> List[str]:
+async def get_images_from_unsplash(query: str, max_images: int = 5) -> List[str]:
     """
-    Fetch images of an organism from Bing Image Search
-    Returns list of base64 encoded images
+    Fetch images from Unsplash API
+    Returns list of image URLs directly (not base64)
     """
     try:
-        images = []
-        search_url = f"https://www.bing.com/images/search?q={organism_name}&qft=+filterui:imagesize-large"
+        # Use Unsplash API with access key
+        unsplash_access_key = os.getenv("UNSPLASH_ACCESS_KEY")
         
+        if not unsplash_access_key:
+            logging.warning("UNSPLASH_ACCESS_KEY not configured, returning empty list")
+            return []
+        
+        # Unsplash API endpoint
+        unsplash_url = "https://api.unsplash.com/search/photos"
+        
+        headers = {
+            'Authorization': f'Client-ID {unsplash_access_key}',
+            'Accept-Version': 'v1'
+        }
+        
+        params = {
+            'query': query,
+            'per_page': max_images,
+            'order_by': 'relevant'
+        }
+        
+        response = requests.get(unsplash_url, headers=headers, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            images = []
+            
+            if 'results' in data:
+                for photo in data['results']:
+                    # Get the regular size URL (good balance between quality and size)
+                    if 'urls' in photo and 'regular' in photo['urls']:
+                        img_url = photo['urls']['regular']
+                        images.append(img_url)
+                        logging.info(f"Found image from Unsplash: {img_url[:50]}...")
+            
+            return images[:max_images]
+        else:
+            logging.warning(f"Unsplash API error: {response.status_code} - {response.text}")
+            return []
+            
+    except Exception as e:
+        logging.warning(f"Error fetching images from Unsplash for '{query}': {e}")
+        return []
+
+async def get_images_from_web_async(organism_name: str, max_images: int = 5) -> List[str]:
+    """
+    Fetch images of an organism - try Unsplash first, then fallback to Wikimedia
+    Returns list of URLs or base64 encoded images
+    """
+    try:
+        # Try Unsplash first
+        images = await get_images_from_unsplash(organism_name, max_images)
+        
+        if images and len(images) > 0:
+            logging.info(f"Got {len(images)} images from Unsplash for '{organism_name}'")
+            return images
+        
+        # Fallback to Wikimedia Commons
+        logging.info(f"Unsplash returned no results, trying Wikimedia Commons for '{organism_name}'")
+        images = []
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         
-        # Try to fetch from Wikimedia Commons API first (more reliable)
         try:
             wiki_url = f"https://commons.wikimedia.org/w/api.php?action=query&list=allimages&aisort=timestamp&aidir=descending&aifrom={organism_name}&ailimit=10&format=json"
             response = requests.get(wiki_url, headers=headers, timeout=10)
@@ -450,29 +506,18 @@ async def get_images_from_web_async(organism_name: str, max_images: int = 5) -> 
                     for img in data['query']['allimages'][:max_images]:
                         if 'url' in img:
                             img_url = img['url']
-                            # Download and convert to base64
-                            try:
-                                img_response = requests.get(img_url, headers=headers, timeout=10)
-                                if img_response.status_code == 200:
-                                    base64_img = base64.b64encode(img_response.content).decode('utf-8')
-                                    images.append(f"data:image/jpeg;base64,{base64_img}")
-                            except Exception as e:
-                                logging.warning(f"Could not fetch image {img_url}: {e}")
-                                continue
+                            images.append(img_url)
+                            logging.info(f"Found image from Wikimedia: {img_url[:50]}...")
         except Exception as e:
             logging.warning(f"Wikimedia API error: {e}")
         
-        # If we don't have enough images, try a simple placeholder approach
-        if len(images) < max_images:
-            # Create placeholder images with organism name
-            for i in range(max_images - len(images)):
-                # Create a simple colored placeholder
-                colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8']
-                color = colors[i % len(colors)]
-                # Return a simple placeholder (you could use a real image generation service here)
-                images.append(f"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Crect width='300' height='300' fill='{color}'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='white'{organism_name[:20]}</text>%3E%3C/svg%3E")
+        if images:
+            logging.info(f"Got {len(images)} images from Wikimedia for '{organism_name}'")
+            return images
         
-        return images[:max_images]
+        # If still no images, return empty list (no placeholders)
+        logging.warning(f"No images found for '{organism_name}' from any source")
+        return []
         
     except Exception as e:
         logging.warning(f"Error fetching images for {organism_name}: {e}")
@@ -541,6 +586,42 @@ async def search_organisms(q: str):
 # Pydantic model for AI organism generation request
 class OrganismNameRequest(BaseModel):
     organism_name: str = Field(..., description="Common name of the organism")
+
+# AI Image Generation Endpoint - Generate images for an organism
+@api_router.post("/admin/organisms/ai-generate-images")
+async def generate_organism_images(request: OrganismNameRequest, _: bool = Depends(verify_admin_token)):
+    """
+    Generate images for an organism using Unsplash API
+    """
+    try:
+        organism_name = request.organism_name.strip()
+        
+        if not organism_name:
+            raise HTTPException(status_code=400, detail="Organism name is required")
+        
+        # Try to fetch images from Unsplash
+        images = await get_images_from_unsplash(organism_name, max_images=5)
+        
+        if images:
+            logging.info(f"Generated {len(images)} images for organism '{organism_name}'")
+            return {
+                "success": True,
+                "image_urls": images,
+                "message": f"Successfully generated {len(images)} images for '{organism_name}'"
+            }
+        else:
+            logging.warning(f"No images found on Unsplash for organism '{organism_name}'")
+            return {
+                "success": False,
+                "image_urls": [],
+                "message": f"Could not find images for '{organism_name}' on Unsplash. Please try another organism name."
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error generating images for organism: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate images: {str(e)}")
 
 # AI Endpoint - Generate organism data using Gemini
 @api_router.post("/admin/organisms/ai-complete")
@@ -1453,7 +1534,7 @@ Make sure the JSON is valid and properly formatted."""
         # Parse JSON
         organism_data = json.loads(response_text)
         
-        # Now generate images using the get_images_from_web function
+        # Now generate images using Unsplash
         images = []
         try:
             search_terms = [
@@ -1462,13 +1543,19 @@ Make sure the JSON is valid and properly formatted."""
                 organism_name
             ]
             
+            # Try each search term until we get real images
             for search_term in search_terms:
                 if search_term:
-                    images = await get_images_from_web_async(search_term, max_images=5)
-                    if images:
-                        break
+                    try:
+                        images = await get_images_from_unsplash(search_term, max_images=5)
+                        if images and len(images) > 0:
+                            logging.info(f"Generated {len(images)} images from Unsplash for term '{search_term}'")
+                            break
+                    except Exception as e:
+                        logging.warning(f"Error searching Unsplash for term '{search_term}': {e}")
+                        continue
         except Exception as e:
-            logging.warning(f"Could not fetch images: {e}")
+            logging.warning(f"Could not fetch images from Unsplash: {e}")
             images = []
         
         # Update suggestion status to approved
