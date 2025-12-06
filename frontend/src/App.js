@@ -1349,8 +1349,9 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
   const [showAiHelper, setShowAiHelper] = useState(false);
   const [aiImageLoading, setAiImageLoading] = useState(false);
   const [aiImageOrganism, setAiImageOrganism] = useState('');
+  const [isFromCameraFlow, setIsFromCameraFlow] = useState(false); // Track if AI was triggered from camera
 
-  // Auto-fill form when initialData is provided (from camera identification)
+  // Auto-fill form when initialData is provided (from camera identification or approval)
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
       console.log('📥 useEffect triggered with initialData:', initialData);
@@ -1367,20 +1368,23 @@ const AddOrganismForm = ({ token, isDark, onSuccess, initialData }) => {
           genus: '',
           species: ''
         },
-        morphology: '', // Empty - will be filled by AI agent
-        physiology: '', // Empty - will be filled by AI agent
-        description: '', // Empty - will be filled by AI agent
+        morphology: initialData.morphology || '', // Preserve from approval data
+        physiology: initialData.physiology || '', // Preserve from approval data
+        description: initialData.description || '', // Preserve from approval data
         images: Array.isArray(initialData.images) ? initialData.images : []
       };
       
       console.log('✏️ Setting formData to:', newFormData);
       setFormData(newFormData);
       
-      // Auto-trigger AI agent to generate morphology, physiology, description
-      if (initialData.name) {
-        console.log('🤖 Triggering AI agent for organism:', initialData.name);
+      // Only auto-trigger AI agent if morphology/physiology are empty (camera flow, not approval flow)
+      if (initialData.name && !initialData.morphology && !initialData.physiology) {
+        console.log('🤖 Marking as camera flow - will auto-trigger AI agent for organism:', initialData.name);
         setAiOrganismName(initialData.name);
+        setIsFromCameraFlow(true); // Mark that this is from camera, allow auto-trigger
         // The AI will be triggered in the next useEffect
+      } else {
+        setIsFromCameraFlow(false); // Not from camera, user will click Generate manually
       }
     } else {
       console.log('⚠️ initialData is empty or null:', initialData);
