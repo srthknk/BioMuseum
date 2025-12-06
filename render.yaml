@@ -18,6 +18,18 @@ services:
       - key: CORS_ORIGINS
         scope: all
         value: http://localhost:3000,http://localhost:3001,https://bio-museum.vercel.app,https://biomuseum.onrender.com
+      - key: GEMINI_API_KEY
+        scope: all
+        value: AIzaSyC8P6vkr9ktvHCUhJxuHnYWUK5hPH8F4WI
+      - key: UNSPLASH_ACCESS_KEY
+        scope: all
+        value: vQ_yvjIskYKmvpXywThJ4u5kBjRzTAk1kDZkwYhwDbY
+      - key: FRONTEND_URL
+        scope: all
+        value: https://biomuseumsbes.vercel.app
+      - key: AUTHORIZED_ADMIN_EMAILS
+        scope: all
+        value: sarthaknk08@gmail.com,sarthaknk07@gmail.com
       - key: FRONTEND_URL
         scope: all
         value: https://bio-museum.vercel.app
