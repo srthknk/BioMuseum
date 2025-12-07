@@ -198,9 +198,9 @@ const approvedData = {
 ## Configuration
 
 ### Unsplash API
-- **Key**: vQ_yvjIskYKmvpXywThJ4u5kBjRzTAk1kDZkwYhwDbY
 - **Endpoint**: https://api.unsplash.com
 - **Rate Limit**: 50 requests/hour (sufficient for admin use)
+- **Setup**: Set UNSPLASH_ACCESS_KEY environment variable from https://unsplash.com/developers
 
 ### Gemini API
 - **Model**: gemini-2.5-flash
