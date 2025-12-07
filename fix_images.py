@@ -7,10 +7,11 @@ This script updates backend/server.py to properly search Unsplash API instead of
 import re
 import requests
 import json
+import os
 from typing import List
 
-# Unsplash API Access Key
-UNSPLASH_ACCESS_KEY = "vQ_yvjIskYKmvpXywThJ4u5kBjRzTAk1kDZkwYhwDbY"
+# Unsplash API Access Key - read from environment variable
+UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
 UNSPLASH_API_URL = "https://api.unsplash.com"
 
 def get_search_terms_from_gemini(organism_name: str) -> List[str]:
@@ -128,7 +129,7 @@ def get_search_terms_from_gemini(organism_name: str):
 
 def search_unsplash_images(organism_name: str, count: int = 6):
     """Search Unsplash API for organism images using AI-enhanced search terms."""
-    UNSPLASH_ACCESS_KEY = "vQ_yvjIskYKmvpXywThJ4u5kBjRzTAk1kDZkwYhwDbY"
+    UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
     UNSPLASH_API_URL = "https://api.unsplash.com"
     images = []
     search_terms = get_search_terms_from_gemini(organism_name)

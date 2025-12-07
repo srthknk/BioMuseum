@@ -81,3 +81,15 @@ android-sdk/ -e
 # Environment files
 *.env
 *.env.*
+render.yaml
+backend/.env
+frontend/.env
+.env.local
+.env.*.local
+
+# Secrets and credentials
+*.key
+*.pem
+*secret*
+*token*
+credentials*.json

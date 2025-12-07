@@ -3,8 +3,9 @@
 
 import requests
 import json
+import os
 
-UNSPLASH_KEY = 'vQ_yvjIskYKmvpXywThJ4u5kBjRzTAk1kDZkwYhwDbY'
+UNSPLASH_KEY = os.getenv('UNSPLASH_ACCESS_KEY')
 API_URL = 'https://api.unsplash.com/search/photos'
 
 print("Testing Unsplash API...")

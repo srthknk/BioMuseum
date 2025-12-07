@@ -727,7 +727,7 @@ Make sure the JSON is valid and properly formatted."""
 
 def search_unsplash_images(organism_name: str, count: int = 6):
     """Search Unsplash API for organism images with fallback options."""
-    UNSPLASH_ACCESS_KEY = "vQ_yvjIskYKmvpXywThJ4u5kBjRzTAk1kDZkwYhwDbY"
+    UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY")
     UNSPLASH_API_URL = "https://api.unsplash.com"
     images = []
     
