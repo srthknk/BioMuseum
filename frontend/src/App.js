@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
+import { HelmetProvider } from 'react-helmet-async';
 import axios from "axios";
 import { QrReader } from 'react-qr-reader';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
@@ -18,7 +19,7 @@ const BACKEND_URL = (() => {
     return process.env.REACT_APP_BACKEND_URL;
   }
   
-  // On deployed Vercel (bio-museum.vercel.app), use Render backend
+  // On deployed Vercel (biomuseumsbes.vercel.app), use Render backend
   if (window.location.hostname.includes('vercel.app')) {
     return 'https://biomuseum.onrender.com';
   }
@@ -3331,20 +3332,22 @@ function App() {
       <AuthProvider>
         <ThemeProvider>
           <AdminProvider>
-            <div className="App">
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Homepage />} />
-                  <Route path="/organisms" element={<OrganismsPage />} />
-                  <Route path="/scanner" element={<QRScanner />} />
-                  <Route path="/organism/:id" element={<OrganismDetail />} />
-                  <Route path="/admin" element={<AdminPanel />} />
-                  <Route path="/biotube" element={<BiotubeWrapper />} />
-                  <Route path="/biotube/watch/:videoId" element={<BiotubeVideoWrapper />} />
-                  <Route path="/about" element={<AboutUsWrapper />} />
-                </Routes>
-              </BrowserRouter>
-            </div>
+            <HelmetProvider>
+              <div className="App">
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Homepage />} />
+                    <Route path="/organisms" element={<OrganismsPage />} />
+                    <Route path="/scanner" element={<QRScanner />} />
+                    <Route path="/organism/:id" element={<OrganismDetail />} />
+                    <Route path="/admin" element={<AdminPanel />} />
+                    <Route path="/biotube" element={<BiotubeWrapper />} />
+                    <Route path="/biotube/watch/:videoId" element={<BiotubeVideoWrapper />} />
+                    <Route path="/about" element={<AboutUsWrapper />} />
+                  </Routes>
+                </BrowserRouter>
+              </div>
+            </HelmetProvider>
           </AdminProvider>
         </ThemeProvider>
       </AuthProvider>

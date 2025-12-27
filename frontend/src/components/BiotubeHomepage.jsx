@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import axios from 'axios';
 
 const BiotubeHomepage = ({ isDark }) => {
@@ -109,6 +110,25 @@ const BiotubeHomepage = ({ isDark }) => {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <Helmet>
+        <title>BioTube - Educational Biology Videos | BioMuseum</title>
+        <meta name="description" content="Watch educational biology videos and tutorials on BioTube. Learn about species, ecosystems, and life science with expert-curated content." />
+        <meta name="keywords" content="biology videos, educational videos, biology tutorials, science learning, species, ecosystems" />
+        <meta property="og:title" content="BioTube - Educational Biology Videos | BioMuseum" />
+        <meta property="og:description" content="Watch educational biology videos and tutorials on BioTube." />
+        <meta property="og:url" content="https://biomuseumsbes.vercel.app/biotube" />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://biomuseumsbes.vercel.app/biotube" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "VideoCollection",
+            "name": "BioTube - Educational Videos",
+            "description": "Collection of educational biology videos and tutorials",
+            "url": "https://biomuseumsbes.vercel.app/biotube"
+          })}
+        </script>
+      </Helmet>
       {/* Header with Video Suggestion Button */}
       <div className={`sticky top-0 z-40 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm`}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center gap-2">

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 
 const AboutUs = ({ isDark }) => {
@@ -6,6 +7,29 @@ const AboutUs = ({ isDark }) => {
 
   return (
     <div className={`flex flex-col min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <Helmet>
+        <title>About BioMuseum - Learn Our Mission & Story</title>
+        <meta name="description" content="Discover the mission and story of BioMuseum. We're dedicated to making biology education interactive, engaging, and accessible to everyone." />
+        <meta name="keywords" content="about us, biology museum, education, science, mission, interactive learning" />
+        <meta property="og:title" content="About BioMuseum - Learn Our Mission" />
+        <meta property="og:description" content="Discover the mission and story of BioMuseum - making biology education interactive and accessible." />
+        <meta property="og:url" content="https://biomuseumsbes.vercel.app/about" />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://biomuseumsbes.vercel.app/about" />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "BioMuseum",
+            "description": "Interactive biology museum and educational platform",
+            "url": "https://biomuseumsbes.vercel.app",
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "contactType": "Customer Support"
+            }
+          })}
+        </script>
+      </Helmet>
       {/* Header */}
       <header className={`${isDark ? 'bg-gray-800' : 'bg-gray-700'} shadow-lg sticky top-0 z-50`}>
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">

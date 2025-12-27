@@ -4,7 +4,50 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#000000" />
-        <meta name="description" content="Biology Museum - Explore the wonders of life science" />
+        <meta name="description" content="Explore the wonders of life science at BioMuseum - Interactive biology museum with videos, AI assistant, and educational content for students and enthusiasts." />
+        <meta name="keywords" content="biology, museum, science education, interactive learning, biology videos, educational platform" />
+        <meta name="author" content="BioMuseum Team" />
+        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        
+        <!-- Open Graph / Social Media -->
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://biomuseumsbes.vercel.app/" />
+        <meta property="og:title" content="BioMuseum - Interactive Biology Learning Platform" />
+        <meta property="og:description" content="Explore the wonders of life science at BioMuseum - Interactive biology museum with videos, AI assistant, and educational content." />
+        <meta property="og:image" content="https://biomuseumsbes.vercel.app/og-image.png" />
+        <meta property="og:site_name" content="BioMuseum" />
+        <meta property="og:locale" content="en_US" />
+        
+        <!-- Twitter Card -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="BioMuseum - Interactive Biology Learning" />
+        <meta name="twitter:description" content="Explore interactive biology content, videos, and AI-powered learning tools." />
+        <meta name="twitter:image" content="https://biomuseumsbes.vercel.app/og-image.png" />
+        
+        <!-- Canonical URL -->
+        <link rel="canonical" href="https://biomuseumsbes.vercel.app/" />
+        
+        <!-- Structured Data (Schema.org) -->
+        <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "EducationalOrganization",
+          "name": "BioMuseum",
+          "description": "Interactive biology museum platform with educational content",
+          "url": "https://biomuseumsbes.vercel.app",
+          "sameAs": [
+            "https://www.facebook.com/biomuseum",
+            "https://twitter.com/biomuseum"
+          ],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "Customer Support"
+          }
+        }
+        </script>
+        
+        <!-- Manifest -->
+        <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
         <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
@@ -18,13 +61,25 @@
       work correctly both with client-side routing and a non-root public URL.
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
-        <title>BioMuseum</title>
+        <title>BioMuseum - Interactive Biology Museum & Learning Platform</title>
         <link rel="icon" type="image/x-icon" href="%PUBLIC_URL%/favicon.ico" />
         <link rel="icon" type="image/png" href="%PUBLIC_URL%/favicon.png" />
         <!-- FontAwesome CDN -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
         <script src="https://unpkg.com/rrweb@latest/dist/rrweb.min.js"></script>
         <script src="https://d2adkz2s9zrlge.cloudfront.net/rrweb-recorder-20250919-1.js"></script>
+        
+        <!-- Google Analytics (Free) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-XXXXXXXXXX', {
+            'page_path': window.location.pathname,
+            'anonymize_ip': true
+          });
+        </script>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
