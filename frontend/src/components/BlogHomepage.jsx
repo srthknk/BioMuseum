@@ -160,13 +160,13 @@ const BlogHomepage = ({ isDark }) => {
                 onClick={() => navigate(`/blog/${blog.id}`)}
                 className={`group cursor-pointer rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl backdrop-blur-md active:scale-95 ${
                   isDark
-                    ? 'bg-gray-800/40 border border-gray-700/40 hover:bg-gray-700/60'
-                    : 'bg-white/40 border border-white/60 hover:bg-white/80'
+                    ? 'bg-gray-800/40 border-2 border-gradient-to-r from-blue-500/60 to-purple-500/60 hover:bg-gray-700/60'
+                    : 'bg-white/40 border-2 border-gradient-to-r from-blue-400/70 to-purple-400/70 hover:bg-white/80'
                 }`}
               >
                 {/* Image */}
                 {blog.image_url && (
-                  <div className="relative h-32 sm:h-40 md:h-48 overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500">
+                  <div className="relative h-28 sm:h-36 md:h-44 overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500">
                     <img
                       src={blog.image_url}
                       alt={blog.subject}
@@ -179,29 +179,29 @@ const BlogHomepage = ({ isDark }) => {
                 )}
 
                 {/* Content */}
-                <div className="p-3 sm:p-4 md:p-6 h-full flex flex-col">
-                  <div className="flex items-start justify-between gap-2 mb-2 sm:mb-3 flex-1">
+                <div className="p-2.5 sm:p-3 md:p-5 h-full flex flex-col">
+                  <div className="flex items-start justify-between gap-1.5 mb-1.5 sm:mb-2 flex-1">
                     <div className="flex-1 min-w-0">
-                      <h3 className={`font-bold text-base sm:text-lg line-clamp-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      <h3 className={`font-bold text-sm sm:text-base line-clamp-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                         {blog.title}
                       </h3>
-                      <p className={`text-xs sm:text-sm mt-0.5 sm:mt-1 line-clamp-1 ${isDark ? 'text-purple-300' : 'text-purple-600'}`}>
+                      <p className={`text-xs mt-0.5 line-clamp-1 ${isDark ? 'text-purple-300' : 'text-purple-600'}`}>
                         {blog.subject}
                       </p>
                     </div>
                   </div>
 
-                  <p className={`line-clamp-2 mb-3 sm:mb-4 text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {blog.content.substring(0, 80)}...
+                  <p className={`line-clamp-1 mb-2 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {blog.content.substring(0, 60)}...
                   </p>
 
                   {/* Meta Info */}
-                  <div className="flex items-center justify-between text-xs gap-2 mt-auto">
-                    <div className="flex gap-2 sm:gap-3">
-                      <span className={`flex items-center gap-0.5 sm:gap-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <div className="flex items-center justify-between text-xs gap-1.5 mt-auto">
+                    <div className="flex gap-1.5 sm:gap-2">
+                      <span className={`flex items-center gap-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                         👁️ {blog.views || 0}
                       </span>
-                      <span className={`flex items-center gap-0.5 sm:gap-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                      <span className={`flex items-center gap-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                         ❤️ {blog.likes || 0}
                       </span>
                     </div>
