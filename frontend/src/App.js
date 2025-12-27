@@ -9,6 +9,9 @@ import BiotubeHomepage from './components/BiotubeHomepage';
 import BiotubeVideoPage from './components/BiotubeVideoPage';
 import BiotubeAdminPanel from './components/BiotubeAdminPanel';
 import AboutUs from './components/AboutUs';
+import BlogHomepage from './components/BlogHomepage';
+import BlogDetailPage from './components/BlogDetailPage';
+import BlogAdminPanel from './components/BlogAdminPanel';
 import { AuthProvider } from './context/AuthContext';
 import "./App.css";
 
@@ -310,6 +313,12 @@ const Homepage = () => {
               >
                 <i className="fas fa-video"></i> <span>BioTube</span>
               </button>
+              <button
+                onClick={() => navigate('/blogs')}
+                className="btn-blog bg-purple-600 hover:bg-purple-700 text-white px-5 sm:px-6 py-2 sm:py-2.5 rounded font-semibold text-sm sm:text-base inline-flex items-center gap-2"
+              >
+                <i className="fas fa-book"></i> <span>Blog</span>
+              </button>
             </div>
           </div>
         </div>
@@ -436,6 +445,18 @@ const Homepage = () => {
                   >
                     <i className="fas fa-info-circle"></i>
                     <span>About Us</span>
+                  </button>
+                </li>
+                <li className="menu-item">
+                  <button
+                    onClick={() => {
+                      navigate('/blogs');
+                      setShowMenu(false);
+                    }}
+                    className="menu-text w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-300 flex items-center gap-3 text-lg"
+                  >
+                    <i className="fas fa-book"></i>
+                    <span>Blog</span>
                   </button>
                 </li>
               </ul>
@@ -909,6 +930,14 @@ const AdminPanel = () => {
             >
               🎬 Biotube
             </button>
+            <button
+              onClick={() => setActiveView('blogs')}
+              className={`px-6 py-4 font-semibold transition-all ${activeView === 'blogs' 
+                ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
+                : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
+            >
+              📚 Blogs
+            </button>
           </div>
 
           {/* Mobile Menu */}
@@ -949,6 +978,12 @@ const AdminPanel = () => {
                 className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'biotube' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
               >
                 🎬 Biotube
+              </button>
+              <button
+                onClick={() => { setActiveView('blogs'); setMobileMenuOpen(false); }}
+                className={`w-full text-left px-4 py-3 font-semibold ${activeView === 'blogs' ? (isDark ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-700') : (isDark ? 'text-gray-300' : 'text-gray-700')}`}
+              >
+                📚 Blogs
               </button>
               <button
                 onClick={() => { navigate('/'); setMobileMenuOpen(false); }}
@@ -1002,6 +1037,12 @@ const AdminPanel = () => {
         )}
         {activeView === 'biotube' && (
           <BiotubeAdminPanel
+            token={token}
+            isDark={isDark}
+          />
+        )}
+        {activeView === 'blogs' && (
+          <BlogAdminPanel
             token={token}
             isDark={isDark}
           />
@@ -3324,6 +3365,18 @@ const AboutUsWrapper = () => {
   return <AboutUs isDark={isDark} />;
 };
 
+// Blog Wrapper Component to access theme context
+const BlogWrapper = () => {
+  const { isDark } = React.useContext(ThemeContext);
+  return <BlogHomepage isDark={isDark} />;
+};
+
+// Blog Detail Wrapper Component to access theme context
+const BlogDetailWrapper = () => {
+  const { isDark } = React.useContext(ThemeContext);
+  return <BlogDetailPage isDark={isDark} />;
+};
+
 function App() {
   const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
@@ -3344,6 +3397,8 @@ function App() {
                     <Route path="/biotube" element={<BiotubeWrapper />} />
                     <Route path="/biotube/watch/:videoId" element={<BiotubeVideoWrapper />} />
                     <Route path="/about" element={<AboutUsWrapper />} />
+                    <Route path="/blogs" element={<BlogWrapper />} />
+                    <Route path="/blog/:blogId" element={<BlogDetailWrapper />} />
                   </Routes>
                 </BrowserRouter>
               </div>

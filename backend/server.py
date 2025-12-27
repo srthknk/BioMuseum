@@ -57,11 +57,13 @@ suggestions_collection = None
 biotube_videos_collection = None
 video_suggestions_collection = None
 video_comments_collection = None
+blogs_collection = None
+blog_suggestions_collection = None
 gmail_users_collection = None
 mongodb_connected = False
 
 async def init_mongodb():
-    global db, organisms_collection, suggestions_collection, biotube_videos_collection, video_suggestions_collection, video_comments_collection, gmail_users_collection, mongodb_connected
+    global db, organisms_collection, suggestions_collection, biotube_videos_collection, video_suggestions_collection, video_comments_collection, blogs_collection, blog_suggestions_collection, gmail_users_collection, mongodb_connected
     max_retries = 15  # Increased from 10 to 15
     retry_count = 0
     
@@ -107,6 +109,8 @@ async def init_mongodb():
             biotube_videos_collection = db.biotube_videos
             video_suggestions_collection = db.video_suggestions
             video_comments_collection = db.video_comments
+            blogs_collection = db.blogs
+            blog_suggestions_collection = db.blog_suggestions
             gmail_users_collection = db.gmail_users
             
             # Test that we can actually query
@@ -328,6 +332,57 @@ class VideoCommentCreate(BaseModel):
     user_name: str
     user_class: str
     text: str
+
+class Blog(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    subject: str
+    content: str
+    image_url: str = ""
+    author: str = "BioMuseum AI"
+    qr_code: str = ""
+    visibility: str = "public"  # public, private, draft
+    views: int = 0
+    likes: int = 0
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    is_ai_generated: bool = True
+
+class BlogCreate(BaseModel):
+    title: str
+    subject: str
+    content: str
+    image_url: Optional[str] = ""
+    author: Optional[str] = "BioMuseum"
+    is_ai_generated: Optional[bool] = True
+
+class BlogUpdate(BaseModel):
+    title: Optional[str] = None
+    subject: Optional[str] = None
+    content: Optional[str] = None
+    image_url: Optional[str] = None
+    author: Optional[str] = None
+    visibility: Optional[str] = None
+
+class BlogSuggestion(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_name: str
+    user_email: str
+    blog_subject: str
+    blog_description: Optional[str] = ""
+    status: str = "pending"  # pending, reviewed, added, dismissed
+    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+class BlogSuggestionCreate(BaseModel):
+    user_name: str
+    user_email: str
+    blog_subject: str
+    blog_description: Optional[str] = ""
+
+class BlogGenerateRequest(BaseModel):
+    subject: str
+    tone: Optional[str] = "educational"  # educational, casual, formal
 
 # Database functions - MongoDB only (no JSON fallback)
 async def get_organisms_list():
@@ -2177,6 +2232,318 @@ async def like_video_comment(comment_id: str):
         return {"message": "Comment liked successfully"}
     except Exception as e:
         logging.error(f"Error liking comment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= BLOG ROUTES =============
+
+# Generate blog using Gemini AI
+@api_router.post("/blogs/generate")
+async def generate_blog_ai(request: BlogGenerateRequest, _: bool = Depends(verify_admin_token)):
+    try:
+        if not HAS_GENAI or not GEMINI_API_KEY:
+            raise HTTPException(status_code=400, detail="Gemini API not configured. Please add GEMINI_API_KEY to .env")
+        
+        prompt = f"""Write a comprehensive {request.tone} biology blog post about: {request.subject}
+
+TITLE: [Create an engaging title about {request.subject}]
+
+INTRODUCTION:
+[2-3 paragraphs introducing the topic and why it matters]
+
+SECTION 1: [Main Concept]
+[Explain the core concept in detail]
+
+SECTION 2: [How It Works]
+[Describe the mechanism or process]
+
+SECTION 3: [Real-World Applications]
+[Provide examples and uses]
+
+SECTION 4: [Key Takeaways]
+- Point 1
+- Point 2
+- Point 3
+- Point 4
+- Point 5
+
+CONCLUSION:
+[Summary and why this matters]
+
+Write it in a {request.tone} tone, suitable for biology students and science enthusiasts."""
+
+        # Try different models to find one that works
+        models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro']
+        response = None
+        last_error = None
+        
+        for model_name in models_to_try:
+            try:
+                logging.info(f"Attempting to use model: {model_name}")
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
+                logging.info(f"Successfully generated content using {model_name}")
+                break
+            except Exception as model_error:
+                last_error = model_error
+                logging.warning(f"Model {model_name} failed: {str(model_error)}")
+                continue
+        
+        if response is None or not response.text:
+            error_msg = f"All models failed. Last error: {str(last_error)}"
+            logging.error(error_msg)
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Failed to generate blog with Gemini. Error: {str(last_error)}. Please check your Gemini API key has proper access."
+            )
+        
+        content = response.text
+        title = f"{request.subject}: A Comprehensive Guide"
+        
+        if "TITLE:" in content:
+            try:
+                title_part = content.split("INTRODUCTION:")[0]
+                title = title_part.replace("TITLE:", "").strip()[:200]
+            except:
+                pass
+        
+        return {
+            "title": title,
+            "subject": request.subject,
+            "content": content,
+            "success": True
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error in blog generation: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Blog generation failed: {str(e)}. Make sure your Gemini API key is valid and has access to generative models."
+        )
+
+# Get all blogs (public)
+@api_router.get("/blogs")
+async def get_all_blogs():
+    try:
+        blogs = await blogs_collection.find(
+            {"visibility": "public"}
+        ).sort("created_at", -1).to_list(None)
+        
+        # Format blogs for response
+        for blog in blogs:
+            blog["_id"] = str(blog.get("_id", ""))
+        
+        return blogs
+    except Exception as e:
+        logging.error(f"Error fetching blogs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get specific blog by ID
+@api_router.get("/blogs/{blog_id}")
+async def get_blog_detail(blog_id: str):
+    try:
+        from bson import ObjectId
+        blog = await blogs_collection.find_one(
+            {"id": blog_id, "visibility": "public"}
+        )
+        
+        if not blog:
+            raise HTTPException(status_code=404, detail="Blog not found")
+        
+        # Increment view count
+        await blogs_collection.update_one(
+            {"id": blog_id},
+            {"$inc": {"views": 1}}
+        )
+        
+        blog["_id"] = str(blog.get("_id", ""))
+        return blog
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error fetching blog: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Create blog (admin - manual or AI generated)
+@api_router.post("/admin/blogs")
+async def create_blog(blog: BlogCreate, _: bool = Depends(verify_admin_token)):
+    try:
+        # Generate QR code for the blog
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(f"https://biomuseumsbes.vercel.app/blog/{blog.id if hasattr(blog, 'id') else 'temp'}")
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convert QR code to base64
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        qr_code_b64 = base64.b64encode(buffered.getvalue()).decode()
+        
+        new_blog = Blog(
+            **blog.dict(),
+            qr_code=qr_code_b64
+        )
+        
+        # Update QR code with actual blog ID
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(f"https://biomuseumsbes.vercel.app/blog/{new_blog.id}")
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buffered = io.BytesIO()
+        img.save(buffered, format="PNG")
+        new_blog.qr_code = base64.b64encode(buffered.getvalue()).decode()
+        
+        await blogs_collection.insert_one(new_blog.dict())
+        return {"message": "Blog created successfully", "id": new_blog.id}
+    except Exception as e:
+        logging.error(f"Error creating blog: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Update blog
+@api_router.put("/admin/blogs/{blog_id}")
+async def update_blog(blog_id: str, updates: BlogUpdate, _: bool = Depends(verify_admin_token)):
+    try:
+        update_data = {k: v for k, v in updates.dict().items() if v is not None}
+        update_data["updated_at"] = datetime.utcnow().isoformat()
+        
+        result = await blogs_collection.update_one(
+            {"id": blog_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Blog not found")
+        
+        return {"message": "Blog updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error updating blog: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Delete blog
+@api_router.delete("/admin/blogs/{blog_id}")
+async def delete_blog(blog_id: str, _: bool = Depends(verify_admin_token)):
+    try:
+        result = await blogs_collection.delete_one({"id": blog_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Blog not found")
+        return {"message": "Blog deleted successfully"}
+    except Exception as e:
+        logging.error(f"Error deleting blog: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get admin blog dashboard
+@api_router.get("/admin/blogs/dashboard")
+async def get_blog_dashboard(_: bool = Depends(verify_admin_token)):
+    try:
+        total_blogs = await blogs_collection.count_documents({})
+        total_views = 0
+        total_likes = 0
+        
+        blogs = await blogs_collection.find({}).to_list(None)
+        for blog in blogs:
+            total_views += blog.get("views", 0)
+            total_likes += blog.get("likes", 0)
+        
+        # Get recent blogs with proper formatting
+        recent_blogs_data = await blogs_collection.find({}).sort("created_at", -1).limit(5).to_list(None)
+        recent_blogs_formatted = []
+        for blog in recent_blogs_data:
+            recent_blogs_formatted.append({
+                "id": str(blog.get("id", "")),
+                "title": blog.get("title", ""),
+                "subject": blog.get("subject", ""),
+                "views": blog.get("views", 0),
+                "likes": blog.get("likes", 0),
+                "created_at": blog.get("created_at", ""),
+                "is_ai_generated": blog.get("is_ai_generated", False)
+            })
+        
+        return {
+            "total_blogs": total_blogs,
+            "total_views": total_views,
+            "total_likes": total_likes,
+            "recent_blogs": recent_blogs_formatted
+        }
+    except Exception as e:
+        logging.error(f"Error fetching blog dashboard: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get all blogs (admin can see all)
+@api_router.get("/admin/blogs")
+async def get_all_blogs_admin(_: bool = Depends(verify_admin_token)):
+    try:
+        blogs = await blogs_collection.find({}).sort("created_at", -1).to_list(None)
+        for blog in blogs:
+            blog["_id"] = str(blog.get("_id", ""))
+        return blogs
+    except Exception as e:
+        logging.error(f"Error fetching blogs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Like a blog
+@api_router.put("/blogs/{blog_id}/like")
+async def like_blog(blog_id: str):
+    try:
+        result = await blogs_collection.update_one(
+            {"id": blog_id},
+            {"$inc": {"likes": 1}}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Blog not found")
+        return {"message": "Blog liked successfully"}
+    except Exception as e:
+        logging.error(f"Error liking blog: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Create blog suggestion
+@api_router.post("/blogs/suggestions")
+async def create_blog_suggestion(suggestion: BlogSuggestionCreate):
+    try:
+        new_suggestion = BlogSuggestion(**suggestion.dict())
+        await blog_suggestions_collection.insert_one(new_suggestion.dict())
+        return {"message": "Blog suggestion submitted successfully", "id": new_suggestion.id}
+    except Exception as e:
+        logging.error(f"Error creating blog suggestion: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get blog suggestions (admin)
+@api_router.get("/admin/blogs/suggestions")
+async def get_blog_suggestions(_: bool = Depends(verify_admin_token)):
+    try:
+        suggestions = await blog_suggestions_collection.find({}).sort("created_at", -1).to_list(None)
+        # Format suggestions to ensure consistency
+        formatted = []
+        for sugg in suggestions:
+            formatted.append({
+                "id": str(sugg.get("id", "")),
+                "blog_subject": sugg.get("blog_subject", ""),
+                "user_name": sugg.get("user_name", ""),
+                "user_email": sugg.get("user_email", ""),
+                "blog_description": sugg.get("blog_description", ""),
+                "status": sugg.get("status", "pending"),
+                "created_at": sugg.get("created_at", ""),
+                "updated_at": sugg.get("updated_at", "")
+            })
+        return formatted
+    except Exception as e:
+        logging.error(f"Error fetching blog suggestions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Update blog suggestion status
+@api_router.put("/admin/blogs/suggestions/{suggestion_id}/status")
+async def update_blog_suggestion_status(suggestion_id: str, status: dict, _: bool = Depends(verify_admin_token)):
+    try:
+        result = await blog_suggestions_collection.update_one(
+            {"id": suggestion_id},
+            {"$set": {"status": status.get("status"), "updated_at": datetime.utcnow().isoformat()}}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Suggestion not found")
+        return {"message": "Suggestion status updated successfully"}
+    except Exception as e:
+        logging.error(f"Error updating suggestion status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 app.include_router(api_router)
