@@ -7,6 +7,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import BiotubeHomepage from './components/BiotubeHomepage';
 import BiotubeVideoPage from './components/BiotubeVideoPage';
 import BiotubeAdminPanel from './components/BiotubeAdminPanel';
+import AboutUs from './components/AboutUs';
 import { AuthProvider } from './context/AuthContext';
 import "./App.css";
 
@@ -117,6 +118,7 @@ const Homepage = () => {
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const navigate = useNavigate();
   const { login } = React.useContext(AdminContext);
   const { isDark, toggleTheme } = React.useContext(ThemeContext);
@@ -250,36 +252,24 @@ const Homepage = () => {
   return (
     <div className={`flex flex-col min-h-screen ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Navbar */}
-      <header className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gradient-to-r from-green-600 to-green-700 border-green-800'} shadow-lg border-b-4 sticky top-0 z-50`}>
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
+      <header className={`${isDark ? 'bg-gray-800' : 'bg-gray-700'} shadow-lg sticky top-0 z-50`}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <div className="text-left">
-              <h1 className="text-xl sm:text-2xl font-bold text-white">🌿 BioMuseum</h1>
+              <h1 className="text-lg sm:text-2xl font-bold text-yellow-400">🌿 BioMuseum</h1>
             </div>
             <div className="flex gap-2 sm:gap-3 items-center">
               <button
-                onClick={() => navigate('/biotube')}
-                className={`${isDark ? 'bg-purple-700 hover:bg-purple-600 text-purple-100' : 'bg-white hover:bg-gray-100 text-purple-700'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
-              >
-                <i className="fas fa-video"></i> <span className="hidden sm:inline">Biotube</span>
-              </button>
-              <button
-                onClick={() => setShowSuggestionModal(true)}
-                className={`${isDark ? 'bg-blue-700 hover:bg-blue-600 text-blue-100' : 'bg-white hover:bg-gray-100 text-green-700'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
-              >
-                <i className="fas fa-lightbulb"></i> <span className="hidden sm:inline">Suggest</span>
-              </button>
-              <button
                 onClick={toggleTheme}
-                className={`${isDark ? 'bg-gray-700 hover:bg-gray-600' : 'bg-white hover:bg-gray-100'} ${isDark ? 'text-yellow-400' : 'text-gray-800'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
+                className={`${isDark ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' : 'bg-gray-600 hover:bg-gray-500 text-gray-200'} px-3 sm:px-4 py-2 rounded font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2`}
               >
                 <i className={`fas ${isDark ? 'fa-sun' : 'fa-moon'}`}></i> <span className="hidden sm:inline">{isDark ? 'Light' : 'Dark'}</span>
               </button>
               <button
-                onClick={() => setShowAdminLogin(true)}
-                className={`${isDark ? 'bg-gray-700 hover:bg-gray-600 text-green-400' : 'bg-white hover:bg-gray-100 text-green-700'} px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 flex items-center gap-1 sm:gap-2 shadow-md hover:shadow-lg`}
+                onClick={() => setShowMenu(!showMenu)}
+                className={`${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-600 hover:bg-gray-500 text-gray-200'} px-3 sm:px-4 py-2 rounded font-semibold text-xs sm:text-sm transition-all duration-200`}
               >
-                <i className="fas fa-shield-alt"></i> <span className="hidden sm:inline">Admin</span>
+                ☰
               </button>
             </div>
           </div>
@@ -287,7 +277,7 @@ const Homepage = () => {
       </header>
 
       {/* Hero Section with Video Background */}
-      <div className="relative h-screen md:h-[calc(100vh-80px)] overflow-hidden flex items-center justify-center">
+      <div className="relative h-96 sm:h-[500px] overflow-hidden flex items-center justify-center">
         <video 
           autoPlay 
           muted 
@@ -300,22 +290,22 @@ const Homepage = () => {
         </video>
         
         {/* Overlay for text */}
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col justify-center items-center">
-          <div className="text-center text-white px-4 sm:px-6 py-8">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 leading-tight drop-shadow-lg">BioMuseum: A Journey Through Living Wonders</h2>
-            <p className="text-sm sm:text-base md:text-lg lg:text-xl mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed drop-shadow-md">
-              Discover the wonders of life science through our interactive biology museum. Learn about diverse organisms and their fascinating characteristics.
+        <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-start pl-6 sm:pl-12">
+          <div className="text-white px-4 sm:px-6 py-8 max-w-2xl">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 leading-tight drop-shadow-lg">BioMuseum A Journey Through Living Wonders</h2>
+            <p className="text-sm sm:text-base md:text-lg mb-6 leading-relaxed drop-shadow-md max-w-xl">
+              Discover the wonders of life science through our interactive biology museum. Learn about diverse diverse organisms and their fascinating characteristics.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
+            <div className="flex gap-3 sm:gap-4 items-center">
               <button
                 onClick={() => navigate('/organisms')}
-                className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base md:text-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="border-2 border-white bg-transparent hover:bg-white hover:text-gray-800 text-white px-5 sm:px-6 py-2 sm:py-2.5 rounded font-semibold text-sm sm:text-base transition-all duration-200 inline-flex items-center gap-2"
               >
                 <i className="fas fa-arrow-right"></i> <span>Explore</span>
               </button>
               <button
                 onClick={() => navigate('/biotube')}
-                className="bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-lg font-semibold text-sm sm:text-base md:text-lg transition-all duration-200 inline-flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 sm:px-6 py-2 sm:py-2.5 rounded font-semibold text-sm sm:text-base transition-all duration-200 inline-flex items-center gap-2"
               >
                 <i className="fas fa-video"></i> <span>BioTube</span>
               </button>
@@ -325,46 +315,144 @@ const Homepage = () => {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1">
+      <main className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-50'} py-8 sm:py-12`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <h3 className={`text-xl sm:text-2xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-800'}`}>Overview</h3>
+          <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
+            {organisms.slice(0, 8).map((org) => (
+              <div
+                key={org.id}
+                onClick={() => navigate(`/organism/${org.id}`)}
+                className="flex-shrink-0 w-32 sm:w-40 h-40 sm:h-48 rounded-lg overflow-hidden cursor-pointer transform hover:scale-105 transition-transform duration-200 snap-start group"
+              >
+                <div className="w-full h-full relative overflow-hidden bg-gray-300">
+                  {org.images && org.images[0] ? (
+                    <img
+                      src={org.images[0]}
+                      alt={org.name}
+                      className="w-full h-full object-cover group-hover:brightness-75 transition-all duration-200"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-400">
+                      <i className="fas fa-leaf text-gray-600 text-3xl"></i>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end p-2">
+                    <p className="text-white text-xs font-semibold line-clamp-1">{org.name}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </main>
 
-      {/* Footer */}
-      <footer className={`${isDark ? 'bg-gradient-to-b from-gray-800 to-gray-900 border-gray-700' : 'bg-gradient-to-b from-gray-900 to-gray-950 border-green-600'} text-white mt-0 border-t-4`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
-            {/* About Section */}
-            <div className="text-center sm:text-left">
-              <h3 className={`text-lg sm:text-2xl font-bold mb-3 sm:mb-4 ${isDark ? 'text-green-400' : 'text-green-400'}`}>🌿 BioMuseum</h3>
-              <p className={isDark ? 'text-gray-400' : 'text-gray-300'}>
-               Our World is Built on Biology and Once We Begin to Understand it, it Becomes a Technology
-              </p>
+      {/* Animated Sidebar Menu */}
+      {showMenu && (
+        <div className="fixed inset-0 z-40 flex">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setShowMenu(false)}
+          ></div>
+
+          {/* Sidebar */}
+          <div
+            className={`relative ml-auto w-64 h-screen ${
+              isDark ? 'bg-gray-800' : 'bg-gray-700'
+            } shadow-2xl transform transition-transform duration-300 ease-out ${
+              showMenu ? 'translate-x-0' : 'translate-x-full'
+            } flex flex-col`}
+          >
+            {/* Close Button */}
+            <div className="flex justify-end p-4">
+              <button
+                onClick={() => setShowMenu(false)}
+                className="text-white hover:text-gray-300 text-2xl transition-colors"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Quick Links */}
-            <div className="text-center sm:text-left">
-              <h4 className={`text-base sm:text-lg font-semibold mb-3 sm:mb-4 ${isDark ? 'text-green-400' : 'text-green-400'}`}>Quick Links</h4>
-              <ul className={`space-y-2 text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-300'}`}>
-                <li><a href="/" className={`hover:${isDark ? 'text-green-300' : 'text-green-400'} transition-colors duration-200 flex items-center justify-center sm:justify-start gap-2`}><i className="fas fa-home"></i><span>Home</span></a></li>
-                <li><a onClick={() => setShowAdminLogin(true)} className={`hover:${isDark ? 'text-green-300' : 'text-green-400'} transition-colors duration-200 cursor-pointer flex items-center justify-center sm:justify-start gap-2`}><i className="fas fa-shield-alt"></i><span>Admin Panel</span></a></li>
+            {/* Menu Items */}
+            <nav className="flex-1 px-6 py-4">
+              <ul className="space-y-3 flex flex-col">
+                <li>
+                  <button
+                    onClick={() => {
+                      navigate('/organisms');
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-200 flex items-center gap-3 text-lg"
+                  >
+                    <i className="fas fa-binoculars"></i>
+                    <span>Explore</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      navigate('/biotube');
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-200 flex items-center gap-3 text-lg"
+                  >
+                    <i className="fas fa-video"></i>
+                    <span>BioTube</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      setShowSuggestionModal(true);
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-200 flex items-center gap-3 text-lg"
+                  >
+                    <i className="fas fa-lightbulb"></i>
+                    <span>Suggest Organism</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      setShowAdminLogin(true);
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-200 flex items-center gap-3 text-lg"
+                  >
+                    <i className="fas fa-shield-alt"></i>
+                    <span>Admin Login</span>
+                  </button>
+                </li>
+                <li className="border-t border-gray-600 pt-3 mt-3">
+                  <button
+                    onClick={() => {
+                      navigate('/about');
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-200 flex items-center gap-3 text-lg"
+                  >
+                    <i className="fas fa-info-circle"></i>
+                    <span>About Us</span>
+                  </button>
+                </li>
               </ul>
-            </div>
+            </nav>
 
-            {/* Contact Info */}
-            <div className="text-center sm:text-left">
-              <h4 className={`text-base sm:text-lg font-semibold mb-3 sm:mb-4 ${isDark ? 'text-green-400' : 'text-green-400'}`}>Contact</h4>
-              <ul className={`space-y-2 text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-300'}`}>
-                <li><a href="mailto:sarthaknk07@outlook.com" className={`hover:${isDark ? 'text-green-300' : 'text-green-400'} transition-colors duration-200 flex items-center justify-center sm:justify-start gap-2`}><i className="fas fa-envelope"></i><span>sarthaknk07@outlook.com</span></a></li>
-                <li className="flex items-center justify-center sm:justify-start gap-2"><i className="fas fa-map-marker-alt"></i><span>Zoology Department, SBES College of Science</span></li>
-              </ul>
+            {/* Footer in Sidebar */}
+            <div className="border-t border-gray-600 p-4">
+              <p className="text-gray-400 text-sm text-center">© 2025 BioMuseum</p>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Divider */}
-          <div className={`border-t ${isDark ? 'border-gray-700' : 'border-gray-700'} mt-8 sm:mt-10 pt-6 sm:pt-8`}>
-            <div className={`text-center text-xs sm:text-sm ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-              <p className="mb-2">© Made with ❤️ @ Chh. Sambhaji Nagar</p>
-              <p>Created by Sarthak N. Kulkarni B.Sc First Year</p>
-            </div>
+      {/* Footer */}
+      <footer className={`${isDark ? 'bg-gray-800' : 'bg-gray-800'} text-white mt-0`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className={`text-center text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
+            <p>© Made with ❤️ @ Chh. Sambhaji Nagar</p>
           </div>
         </div>
       </footer>
@@ -3217,6 +3305,24 @@ const OrganismsPage = () => {
   );
 };
 
+// Biotube Wrapper Component to access theme context
+const BiotubeWrapper = () => {
+  const { isDark } = React.useContext(ThemeContext);
+  return <BiotubeHomepage isDark={isDark} />;
+};
+
+// Biotube Video Wrapper Component to access theme context
+const BiotubeVideoWrapper = () => {
+  const { isDark } = React.useContext(ThemeContext);
+  return <BiotubeVideoPage isDark={isDark} />;
+};
+
+// About Us Wrapper Component to access theme context
+const AboutUsWrapper = () => {
+  const { isDark } = React.useContext(ThemeContext);
+  return <AboutUs isDark={isDark} />;
+};
+
 function App() {
   const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
@@ -3235,6 +3341,7 @@ function App() {
                   <Route path="/admin" element={<AdminPanel />} />
                   <Route path="/biotube" element={<BiotubeWrapper />} />
                   <Route path="/biotube/watch/:videoId" element={<BiotubeVideoWrapper />} />
+                  <Route path="/about" element={<AboutUsWrapper />} />
                 </Routes>
               </BrowserRouter>
             </div>
@@ -3244,17 +3351,5 @@ function App() {
     </GoogleOAuthProvider>
   );
 }
-
-// Biotube Wrapper Component to access theme context
-const BiotubeWrapper = () => {
-  const { isDark } = React.useContext(ThemeContext);
-  return <BiotubeHomepage isDark={isDark} />;
-};
-
-// Biotube Video Wrapper Component to access theme context
-const BiotubeVideoWrapper = () => {
-  const { isDark } = React.useContext(ThemeContext);
-  return <BiotubeVideoPage isDark={isDark} />;
-};
 
 export default App;
