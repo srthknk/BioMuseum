@@ -267,7 +267,7 @@ const Homepage = () => {
               </button>
               <button
                 onClick={() => setShowMenu(!showMenu)}
-                className={`${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-600 hover:bg-gray-500 text-gray-200'} px-3 sm:px-4 py-2 rounded font-semibold text-xs sm:text-sm transition-all duration-200`}
+                className={`hamburger-btn ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-600 hover:bg-gray-500 text-gray-200'} px-3 sm:px-4 py-2 rounded font-semibold text-xs sm:text-sm transition-all duration-300 ${showMenu ? 'active' : ''}`}
               >
                 ☰
               </button>
@@ -296,16 +296,16 @@ const Homepage = () => {
             <p className="text-sm sm:text-base md:text-lg mb-6 leading-relaxed drop-shadow-md max-w-xl">
               Discover the wonders of life science through our interactive biology museum. Learn about diverse diverse organisms and their fascinating characteristics.
             </p>
-            <div className="flex gap-3 sm:gap-4 items-center">
+            <div className="button-row">
               <button
                 onClick={() => navigate('/organisms')}
-                className="border-2 border-white bg-transparent hover:bg-white hover:text-gray-800 text-white px-5 sm:px-6 py-2 sm:py-2.5 rounded font-semibold text-sm sm:text-base transition-all duration-200 inline-flex items-center gap-2"
+                className="btn-explore border-2 border-white bg-transparent hover:bg-white hover:text-gray-800 text-white px-5 sm:px-6 py-2 sm:py-2.5 rounded font-semibold text-sm sm:text-base inline-flex items-center gap-2"
               >
                 <i className="fas fa-arrow-right"></i> <span>Explore</span>
               </button>
               <button
                 onClick={() => navigate('/biotube')}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white px-5 sm:px-6 py-2 sm:py-2.5 rounded font-semibold text-sm sm:text-base transition-all duration-200 inline-flex items-center gap-2"
+                className="btn-biotube bg-yellow-500 hover:bg-yellow-600 text-white px-5 sm:px-6 py-2 sm:py-2.5 rounded font-semibold text-sm sm:text-base inline-flex items-center gap-2"
               >
                 <i className="fas fa-video"></i> <span>BioTube</span>
               </button>
@@ -323,21 +323,21 @@ const Homepage = () => {
               <div
                 key={org.id}
                 onClick={() => navigate(`/organism/${org.id}`)}
-                className="flex-shrink-0 w-32 sm:w-40 h-40 sm:h-48 rounded-lg overflow-hidden cursor-pointer transform hover:scale-105 transition-transform duration-200 snap-start group"
+                className="organism-modal flex-shrink-0 w-32 sm:w-40 h-40 sm:h-48 rounded-lg overflow-hidden cursor-pointer transform hover:scale-105 transition-all duration-300 snap-start group"
               >
                 <div className="w-full h-full relative overflow-hidden bg-gray-300">
                   {org.images && org.images[0] ? (
                     <img
                       src={org.images[0]}
                       alt={org.name}
-                      className="w-full h-full object-cover group-hover:brightness-75 transition-all duration-200"
+                      className="organism-image w-full h-full object-cover group-hover:brightness-75 transition-all duration-300"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-400">
                       <i className="fas fa-leaf text-gray-600 text-3xl"></i>
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end p-2">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2">
                     <p className="text-white text-xs font-semibold line-clamp-1">{org.name}</p>
                   </div>
                 </div>
@@ -352,7 +352,7 @@ const Homepage = () => {
         <div className="fixed inset-0 z-40 flex">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black bg-opacity-50"
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-fade"
             onClick={() => setShowMenu(false)}
           ></div>
 
@@ -360,7 +360,7 @@ const Homepage = () => {
           <div
             className={`relative ml-auto w-64 h-screen ${
               isDark ? 'bg-gray-800' : 'bg-gray-700'
-            } shadow-2xl transform transition-transform duration-300 ease-out ${
+            } shadow-2xl transform transition-transform duration-400 ease-out sidebar-enter ${
               showMenu ? 'translate-x-0' : 'translate-x-full'
             } flex flex-col`}
           >
@@ -368,7 +368,7 @@ const Homepage = () => {
             <div className="flex justify-end p-4">
               <button
                 onClick={() => setShowMenu(false)}
-                className="text-white hover:text-gray-300 text-2xl transition-colors"
+                className="text-white hover:text-gray-300 text-2xl transition-colors duration-300"
               >
                 ✕
               </button>
@@ -377,61 +377,61 @@ const Homepage = () => {
             {/* Menu Items */}
             <nav className="flex-1 px-6 py-4">
               <ul className="space-y-3 flex flex-col">
-                <li>
+                <li className="menu-item">
                   <button
                     onClick={() => {
                       navigate('/organisms');
                       setShowMenu(false);
                     }}
-                    className="w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-200 flex items-center gap-3 text-lg"
+                    className="menu-text w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-300 flex items-center gap-3 text-lg"
                   >
                     <i className="fas fa-binoculars"></i>
                     <span>Explore</span>
                   </button>
                 </li>
-                <li>
+                <li className="menu-item">
                   <button
                     onClick={() => {
                       navigate('/biotube');
                       setShowMenu(false);
                     }}
-                    className="w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-200 flex items-center gap-3 text-lg"
+                    className="menu-text w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-300 flex items-center gap-3 text-lg"
                   >
                     <i className="fas fa-video"></i>
                     <span>BioTube</span>
                   </button>
                 </li>
-                <li>
+                <li className="menu-item">
                   <button
                     onClick={() => {
                       setShowSuggestionModal(true);
                       setShowMenu(false);
                     }}
-                    className="w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-200 flex items-center gap-3 text-lg"
+                    className="menu-text w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-300 flex items-center gap-3 text-lg"
                   >
                     <i className="fas fa-lightbulb"></i>
                     <span>Suggest Organism</span>
                   </button>
                 </li>
-                <li>
+                <li className="menu-item">
                   <button
                     onClick={() => {
                       setShowAdminLogin(true);
                       setShowMenu(false);
                     }}
-                    className="w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-200 flex items-center gap-3 text-lg"
+                    className="menu-text w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-300 flex items-center gap-3 text-lg"
                   >
                     <i className="fas fa-shield-alt"></i>
                     <span>Admin Login</span>
                   </button>
                 </li>
-                <li className="border-t border-gray-600 pt-3 mt-3">
+                <li className="menu-item border-t border-gray-600 pt-3 mt-3">
                   <button
                     onClick={() => {
                       navigate('/about');
                       setShowMenu(false);
                     }}
-                    className="w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-200 flex items-center gap-3 text-lg"
+                    className="menu-text w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-300 flex items-center gap-3 text-lg"
                   >
                     <i className="fas fa-info-circle"></i>
                     <span>About Us</span>

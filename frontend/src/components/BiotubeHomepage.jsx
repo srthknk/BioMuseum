@@ -327,7 +327,7 @@ const BiotubeHomepage = ({ isDark }) => {
               <a
                 key={video.id}
                 href={`/biotube/watch/${video.id}`}
-                className={`group rounded-lg overflow-hidden transition-all hover:shadow-lg ${
+                className={`group btn-biotube rounded-lg overflow-hidden transition-all hover:shadow-lg ${
                   isDark ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
                 }`}
               >
@@ -336,7 +336,7 @@ const BiotubeHomepage = ({ isDark }) => {
                   <img
                     src={video.thumbnail_url || 'https://via.placeholder.com/320x180?text=No+Thumbnail'}
                     alt={video.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="organism-image w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
                       e.target.src = 'https://via.placeholder.com/320x180?text=Video';
                     }}
