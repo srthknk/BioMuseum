@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { formatDateIST } from '../utils/dateFormatter';
 
 const BlogAdminPanel = ({ token, isDark }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -251,7 +252,7 @@ const BlogAdminPanel = ({ token, isDark }) => {
                           <div className={`text-sm mt-2 flex gap-4 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                             <span>👁️ {blog.views || 0}</span>
                             <span>❤️ {blog.likes || 0}</span>
-                            <span>📅 {new Date(blog.created_at).toLocaleDateString()}</span>
+                            <span>📅 {formatDateIST(blog.created_at)}</span>
                           </div>
                         </div>
                       ))}
@@ -335,7 +336,7 @@ const BlogAdminPanel = ({ token, isDark }) => {
                         <div className={`text-sm flex flex-wrap gap-4 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
                           <span>👁️ {blog.views || 0} views</span>
                           <span>❤️ {blog.likes || 0} likes</span>
-                          <span>📅 {new Date(blog.created_at).toLocaleDateString()}</span>
+                          <span>📅 {formatDateIST(blog.created_at)}</span>
                           {blog.is_ai_generated && <span className="px-2 py-1 rounded bg-blue-500/30 text-blue-300 text-xs">🤖 AI Generated</span>}
                         </div>
                       </div>
@@ -384,7 +385,7 @@ const BlogAdminPanel = ({ token, isDark }) => {
                       </div>
                     </div>
                     <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'} mb-4`}>
-                      📅 {new Date(suggestion.created_at).toLocaleDateString()}
+                      📅 {formatDateIST(suggestion.created_at)}
                     </div>
                     {suggestion.status === 'pending' && (
                       <div className="flex gap-3 flex-wrap">

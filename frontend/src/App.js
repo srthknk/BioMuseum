@@ -12,7 +12,9 @@ import AboutUs from './components/AboutUs';
 import BlogHomepage from './components/BlogHomepage';
 import BlogDetailPage from './components/BlogDetailPage';
 import BlogAdminPanel from './components/BlogAdminPanel';
+import BioMuseumAIChatbot from './components/BioMuseumAIChatbot';
 import { AuthProvider } from './context/AuthContext';
+import { formatDateIST } from './utils/dateFormatter';
 import "./App.css";
 
 // Determine backend URL based on current location
@@ -2353,6 +2355,7 @@ const PrintOrganismModal = ({ organism, isDark, onClose }) => {
   const printRef = React.useRef();
 
   const handlePrint = () => {
+    const istDate = formatDateIST(new Date());
     const printWindow = window.open('', '', 'height=500,width=500');
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -2453,7 +2456,7 @@ const PrintOrganismModal = ({ organism, isDark, onClose }) => {
             <div class="qr-code" id="qr-placeholder"></div>
             <div class="footer">
               <p>BioMuseum Collection</p>
-              <p>${new Date().toLocaleDateString()}</p>
+              <p>${istDate}</p>
             </div>
           </div>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
@@ -3400,6 +3403,7 @@ function App() {
                     <Route path="/blogs" element={<BlogWrapper />} />
                     <Route path="/blog/:blogId" element={<BlogDetailWrapper />} />
                   </Routes>
+                  <BioMuseumAIChatbot />
                 </BrowserRouter>
               </div>
             </HelmetProvider>

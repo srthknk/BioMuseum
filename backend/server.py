@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
 from datetime import datetime, timedelta
+import pytz
 import qrcode
 import io
 import base64
@@ -22,6 +23,13 @@ import asyncio
 import socket
 import dns.resolver
 import jwt
+
+# IST Timezone Configuration
+IST = pytz.timezone('Asia/Kolkata')
+
+def get_ist_now():
+    """Get current time in IST (Indian Standard Time) UTC+5:30"""
+    return datetime.now(IST).isoformat()
 
 # Google Generative AI - with graceful fallback
 try:
@@ -191,8 +199,8 @@ class Organism(OrganismBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     qr_code_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     qr_code_image: Optional[str] = None
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=get_ist_now)
+    updated_at: str = Field(default_factory=get_ist_now)
 
 class OrganismCreate(OrganismBase):
     pass
@@ -223,8 +231,8 @@ class GmailUserCreate(BaseModel):
 
 class GmailUser(GmailUserCreate):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    login_timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    last_active: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    login_timestamp: str = Field(default_factory=get_ist_now)
+    last_active: str = Field(default_factory=get_ist_now)
     is_active: bool = True
     jwt_token: Optional[str] = None
 
@@ -253,8 +261,8 @@ class Suggestion(BaseModel):
     educational_level: str  # 11th, 12th, B.Sc 1st, B.Sc 2nd, B.Sc 3rd, B.Sc 4th, BCS, BCA, B.Voc, Teacher, etc.
     status: str = "pending"  # pending, approved, rejected
     ai_verification: Optional[dict] = None
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=get_ist_now)
+    updated_at: str = Field(default_factory=get_ist_now)
 
 class SuggestionCreate(BaseModel):
     user_name: str
@@ -279,8 +287,8 @@ class BiotubVideo(BaseModel):
     thumbnail_url: str = ""
     qr_code: str = ""
     visibility: str = "public"  # public, private, draft
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=get_ist_now)
+    updated_at: str = Field(default_factory=get_ist_now)
 
 class BiotubVideoCreate(BaseModel):
     title: str
@@ -310,8 +318,8 @@ class VideoSuggestion(BaseModel):
     video_title: str
     video_description: Optional[str] = ""
     status: str = "pending"  # pending, reviewed, added, dismissed
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=get_ist_now)
+    updated_at: str = Field(default_factory=get_ist_now)
 
 class VideoSuggestionCreate(BaseModel):
     user_name: str
@@ -326,7 +334,7 @@ class VideoComment(BaseModel):
     user_class: str
     text: str
     likes: int = 0
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=get_ist_now)
 
 class VideoCommentCreate(BaseModel):
     user_name: str
@@ -344,8 +352,8 @@ class Blog(BaseModel):
     visibility: str = "public"  # public, private, draft
     views: int = 0
     likes: int = 0
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=get_ist_now)
+    updated_at: str = Field(default_factory=get_ist_now)
     is_ai_generated: bool = True
 
 class BlogCreate(BaseModel):
@@ -371,13 +379,23 @@ class BlogSuggestion(BaseModel):
     blog_subject: str
     blog_description: Optional[str] = ""
     status: str = "pending"  # pending, reviewed, added, dismissed
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=get_ist_now)
+    updated_at: str = Field(default_factory=get_ist_now)
 
 class BlogSuggestionCreate(BaseModel):
     user_name: str
     user_email: str
     blog_subject: str
+
+class BiologyQuestion(BaseModel):
+    question: str = Field(..., description="User's biology question")
+    context: Optional[str] = None  # Optional: what organism they're asking about
+
+class BiologyAnswer(BaseModel):
+    answer: str
+    related_organisms: List[str] = []
+    confidence: str  # "high", "medium", "low"
+    suggestions: List[str] = []  # Follow-up questions
     blog_description: Optional[str] = ""
 
 class BlogGenerateRequest(BaseModel):
@@ -1156,7 +1174,7 @@ async def gmail_login(request: GoogleLoginRequest):
                 {"email": email},
                 {
                     "$set": {
-                        "last_active": datetime.utcnow().isoformat(),
+                        "last_active": get_ist_now(),
                         "is_active": True,
                         "profile_picture": picture,  # Update picture in case it changed
                         "name": name  # Update name in case it changed
@@ -1180,7 +1198,7 @@ async def gmail_login(request: GoogleLoginRequest):
             "sub": user_record["id"],
             "email": email,
             "name": name,
-            "exp": datetime.utcnow() + timedelta(days=30)  # 30-day expiration
+            "exp": datetime.now(IST) + timedelta(days=30)  # 30-day expiration
         }
         jwt_token = jwt.encode(payload, os.environ.get("JWT_SECRET_KEY", "biomuseum-secret"), algorithm="HS256")
         
@@ -1243,7 +1261,7 @@ async def verify_token(authorization: str = Header(None)):
         # Update last_active
         await gmail_users_collection.update_one(
             {"id": user["id"]},
-            {"$set": {"last_active": datetime.utcnow().isoformat()}}
+            {"$set": {"last_active": get_ist_now()}}
         )
         
         return GmailUserResponse(
@@ -1359,7 +1377,7 @@ async def update_organism(organism_id: str, updates: OrganismUpdate, _: bool = D
             raise HTTPException(status_code=404, detail="Organism not found")
         
         update_data = {k: v for k, v in updates.dict().items() if v is not None}
-        update_data['updated_at'] = datetime.utcnow().isoformat()
+        update_data['updated_at'] = get_ist_now()
         
         updated_org = await update_organism_db(organism_id, update_data)
         if not updated_org:
@@ -1458,7 +1476,7 @@ async def update_suggestion_status(suggestion_id: str, status: str = Query(...),
         
         result = await suggestions_collection.update_one(
             {"id": suggestion_id},
-            {"$set": {"status": status, "updated_at": datetime.utcnow().isoformat()}}
+            {"$set": {"status": status, "updated_at": get_ist_now()}}
         )
         
         if result.matched_count == 0:
@@ -1519,7 +1537,7 @@ async def verify_suggestion_ai(suggestion_id: str, _: bool = Depends(verify_admi
             {
                 "$set": {
                     "ai_verification": verification_data,
-                    "updated_at": datetime.utcnow().isoformat()
+                    "updated_at": get_ist_now()
                 }
             }
         )
@@ -1619,7 +1637,7 @@ Make sure the JSON is valid and properly formatted."""
             {
                 "$set": {
                     "status": "approved",
-                    "updated_at": datetime.utcnow().isoformat(),
+                    "updated_at": get_ist_now(),
                     "ai_verification": {
                         "is_authentic": True,
                         "reason": "Admin approved and generated complete data"
@@ -1751,7 +1769,7 @@ async def check_and_auto_reject_duplicate(suggestion_id: str, _: bool = Depends(
                         "status": "rejected",
                         "rejection_reason": f"Duplicate: '{organism_name}' already exists in database (ID: {existing_organism.get('id')})",
                         "auto_rejected": True,
-                        "updated_at": datetime.utcnow().isoformat()
+                        "updated_at": get_ist_now()
                     }
                 }
             )
@@ -2005,7 +2023,7 @@ async def update_biotube_video(video_id: str, update_data: BiotubVideoUpdate, _:
             raise HTTPException(status_code=404, detail="Video not found")
         
         update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
-        update_dict["updated_at"] = datetime.utcnow().isoformat()
+        update_dict["updated_at"] = get_ist_now()
         
         await biotube_videos_collection.update_one({"id": video_id}, {"$set": update_dict})
         return {"message": "Video updated successfully"}
@@ -2084,7 +2102,7 @@ async def update_video_suggestion_status(suggestion_id: str, new_status: str = Q
         
         result = await video_suggestions_collection.update_one(
             {"id": suggestion_id},
-            {"$set": {"status": new_status, "updated_at": datetime.utcnow().isoformat()}}
+            {"$set": {"status": new_status, "updated_at": get_ist_now()}}
         )
         
         if result.matched_count == 0:
@@ -2404,7 +2422,7 @@ async def create_blog(blog: BlogCreate, _: bool = Depends(verify_admin_token)):
 async def update_blog(blog_id: str, updates: BlogUpdate, _: bool = Depends(verify_admin_token)):
     try:
         update_data = {k: v for k, v in updates.dict().items() if v is not None}
-        update_data["updated_at"] = datetime.utcnow().isoformat()
+        update_data["updated_at"] = get_ist_now()
         
         result = await blogs_collection.update_one(
             {"id": blog_id},
@@ -2537,7 +2555,7 @@ async def update_blog_suggestion_status(suggestion_id: str, status: dict, _: boo
     try:
         result = await blog_suggestions_collection.update_one(
             {"id": suggestion_id},
-            {"$set": {"status": status.get("status"), "updated_at": datetime.utcnow().isoformat()}}
+            {"$set": {"status": status.get("status"), "updated_at": get_ist_now()}}
         )
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Suggestion not found")
@@ -2545,6 +2563,113 @@ async def update_blog_suggestion_status(suggestion_id: str, status: dict, _: boo
     except Exception as e:
         logging.error(f"Error updating suggestion status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# BioMuseum AI Chatbot Endpoint
+@api_router.post("/ai/ask")
+async def ask_biology_question(request: BiologyQuestion):
+    """
+    Ask BioMuseum Intelligence about any biology topic (Classes 1-12, NEET, degree, PhD level)
+    Only answers biology-related questions
+    """
+    try:
+        if not HAS_GENAI or not GEMINI_API_KEY:
+            raise HTTPException(status_code=503, detail="AI service not available")
+        
+        question = request.question.strip()
+        if not question:
+            raise HTTPException(status_code=400, detail="Question cannot be empty")
+        
+        # Use same model as organism generation (gemini-2.5-flash)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Shorter, more efficient prompt to reduce token usage
+        comprehensive_prompt = f"""You are BioMuseum Intelligence. ONLY answer biology questions.
+
+Question: {question}
+
+Respond ONLY with JSON (no other text):
+{{"answer": "2-3 paragraphs, clear and scientific", "organisms": ["org1", "org2"], "suggestions": ["Q1?", "Q2?"]}}
+
+If NOT biology: {{"answer": "I only help with biology questions!", "organisms": [], "suggestions": ["Ask about animals", "Ask about plants", "Ask about genetics"]}}"""
+        
+        response = model.generate_content(comprehensive_prompt)
+        response_text = response.text.strip()
+        
+        # Parse JSON response - handle various formats
+        try:
+            response_text = response_text.strip()
+            
+            # Remove 'json' prefix if present (e.g., ```json {"...})
+            if response_text.startswith('```json'):
+                response_text = response_text[7:].strip()
+            if response_text.startswith('json'):
+                response_text = response_text[4:].strip()
+            
+            # Remove markdown code blocks if present
+            if response_text.startswith('```'):
+                response_text = response_text[3:].strip()
+            if response_text.endswith('```'):
+                response_text = response_text[:-3].strip()
+            
+            # Find JSON object
+            if "{" in response_text:
+                json_start = response_text.find("{")
+                json_end = response_text.rfind("}") + 1
+                json_str = response_text[json_start:json_end]
+            else:
+                json_str = response_text
+                
+            result = json.loads(json_str)
+            
+            return {
+                "answer": result.get("answer", "").strip(),
+                "related_organisms": result.get("organisms", [])[:5],
+                "confidence": "high",
+                "suggestions": result.get("suggestions", [])[:3]
+            }
+        except json.JSONDecodeError as e:
+            # If JSON parsing fails, try to extract answer text anyway
+            if "answer" in response_text.lower():
+                # Try to find content between "answer" and next field
+                try:
+                    start = response_text.lower().find('"answer"') + 8
+                    end = response_text.find('"', start + 2)
+                    if end > start:
+                        answer = response_text[start:end].strip().strip('":,')
+                        return {
+                            "answer": answer,
+                            "related_organisms": [],
+                            "confidence": "medium",
+                            "suggestions": ["Can you explain more?", "What are related topics?"]
+                        }
+                except:
+                    pass
+            
+            return {
+                "answer": response_text[:500],  # Return first 500 chars if parsing fails
+                "related_organisms": [],
+                "confidence": "low",
+                "suggestions": ["Ask another question?"]
+            }
+        
+    except Exception as e:
+        error_msg = str(e)
+        logging.error(f"Error in AI chatbot: {error_msg}")
+        
+        # Check for rate limit errors
+        if "429" in error_msg or "quota" in error_msg.lower():
+            raise HTTPException(
+                status_code=429, 
+                detail="API quota exceeded. Please try again in a few moments. The free tier has limited requests per day."
+            )
+        elif "SAFETY" in error_msg or "safety" in error_msg:
+            raise HTTPException(
+                status_code=400,
+                detail="The question contains content that I cannot discuss. Please ask a different biology question."
+            )
+        else:
+            raise HTTPException(status_code=500, detail=f"Error processing question: {error_msg[:100]}")
+
 
 app.include_router(api_router)
 

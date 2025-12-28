@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import axios from 'axios';
+import { formatDateIST } from '../utils/dateFormatter';
 
 const BlogHomepage = ({ isDark }) => {
   const navigate = useNavigate();
@@ -206,7 +207,7 @@ const BlogHomepage = ({ isDark }) => {
                       </span>
                     </div>
                     <span className={`${isDark ? 'text-gray-500' : 'text-gray-500'} text-xs whitespace-nowrap`}>
-                      {new Date(blog.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {formatDateIST(blog.created_at, { month: 'short', day: 'numeric' })}
                     </span>
                   </div>
                 </div>

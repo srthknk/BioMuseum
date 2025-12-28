@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { formatDateIST } from '../utils/dateFormatter';
 
 const BiotubeVideoPage = ({ isDark }) => {
   const { videoId } = useParams();
@@ -313,7 +314,7 @@ const BiotubeVideoPage = ({ isDark }) => {
                               {comment.user_name}
                             </h4>
                             <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                              {comment.user_class} • {new Date(comment.created_at).toLocaleDateString()}
+                              {comment.user_class} • {formatDateIST(comment.created_at)}
                             </p>
                           </div>
                           <button

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { formatDateIST } from '../utils/dateFormatter';
 
 const BiotubeAdminPanel = ({ token, isDark }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -247,7 +248,7 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
                         <div key={vid.id} className={`p-4 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
                           <p className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{vid.title}</p>
                           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            {new Date(vid.created_at).toLocaleDateString()}
+                            {formatDateIST(vid.created_at)}
                           </p>
                         </div>
                       ))

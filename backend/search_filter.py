@@ -5,6 +5,15 @@ Enables users to find organisms using multiple criteria
 
 from typing import List, Optional, Dict
 from datetime import datetime
+import pytz
+import uuid
+
+# IST Timezone Configuration
+IST = pytz.timezone('Asia/Kolkata')
+
+def get_ist_now():
+    """Get current time in IST (Indian Standard Time) UTC+5:30"""
+    return datetime.now(IST).isoformat()
 
 class OrganismFilter:
     """Advanced filtering for organisms"""
@@ -104,13 +113,13 @@ class SearchHistory:
     ) -> Dict:
         """Create search history entry"""
         return {
-            "id": str(__import__('uuid').uuid4()),
+            "id": str(uuid.uuid4()),
             "user_identifier": user_identifier,
             "search_term": search_term,
             "filters_used": filters_used,
             "results_count": results_count,
-            "timestamp": datetime.utcnow().isoformat(),
-            "created_at": datetime.utcnow().isoformat()
+            "timestamp": get_ist_now(),
+            "created_at": get_ist_now()
         }
     
     @staticmethod

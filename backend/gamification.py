@@ -7,6 +7,14 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
 import uuid
+import pytz
+
+# IST Timezone Configuration
+IST = pytz.timezone('Asia/Kolkata')
+
+def get_ist_now():
+    """Get current time in IST (Indian Standard Time) UTC+5:30"""
+    return datetime.now(IST).isoformat()
 
 class UserStats(BaseModel):
     """User gamification statistics"""
@@ -24,9 +32,9 @@ class UserStats(BaseModel):
         if not data.get('id'):
             data['id'] = str(uuid.uuid4())
         if not data.get('created_at'):
-            data['created_at'] = datetime.utcnow().isoformat()
+            data['created_at'] = get_ist_now()
         if not data.get('updated_at'):
-            data['updated_at'] = datetime.utcnow().isoformat()
+            data['updated_at'] = get_ist_now()
         super().__init__(**data)
     
     def dict(self):

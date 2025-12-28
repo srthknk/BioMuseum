@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import axios from 'axios';
+import { formatDateIST, formatTimeIST } from '../utils/dateFormatter';
 
 const BlogDetailPage = ({ isDark }) => {
   const { blogId } = useParams();
@@ -141,8 +142,8 @@ const BlogDetailPage = ({ isDark }) => {
             
             {/* Meta Info */}
             <div className={`flex flex-wrap items-center gap-2 sm:gap-3 md:gap-4 text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              <span className="truncate">📅 {new Date(blog.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-              <span className="truncate">⏰ {new Date(blog.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="truncate">📅 {formatDateIST(blog.created_at, { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+              <span className="truncate">⏰ {formatTimeIST(blog.created_at, { hour: '2-digit', minute: '2-digit' })}</span>
               <span className="truncate">✍️ {blog.author || 'BioMuseum'}</span>
             </div>
           </div>

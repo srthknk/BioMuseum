@@ -6,6 +6,14 @@ Provides insights into platform usage and engagement
 from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from collections import Counter
+import pytz
+
+# IST Timezone Configuration
+IST = pytz.timezone('Asia/Kolkata')
+
+def get_ist_now():
+    """Get current time in IST (Indian Standard Time) UTC+5:30"""
+    return datetime.now(IST).isoformat()
 
 class AnalyticsEngine:
     """Generate analytics data for dashboards"""
@@ -110,7 +118,7 @@ class AnalyticsEngine:
     @staticmethod
     def get_growth_trends(organisms: List[Dict], videos: List[Dict], days: int = 30) -> Dict:
         """Get growth trends over time"""
-        cutoff_date = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        cutoff_date = (datetime.now(IST) - timedelta(days=days)).isoformat()
         
         recent_organisms = [o for o in organisms if o.get('created_at', '') > cutoff_date]
         recent_videos = [v for v in videos if v.get('created_at', '') > cutoff_date]
