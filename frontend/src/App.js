@@ -262,7 +262,7 @@ const Homepage = () => {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex justify-between items-center">
             <div className="text-left">
-              <h1 className="text-lg sm:text-2xl font-bold text-yellow-400">🌿 BioMuseum</h1>
+              <h1 className="text-lg sm:text-2xl font-bold text-yellow-400"> BioMuseum</h1>
             </div>
             <div className="flex gap-2 sm:gap-3 items-center">
               <button
@@ -422,7 +422,7 @@ const Homepage = () => {
                     className="menu-text w-full text-left text-white hover:text-yellow-400 py-3 px-4 rounded-lg hover:bg-gray-700 transition-all duration-300 flex items-center gap-3 text-lg"
                   >
                     <i className="fas fa-lightbulb"></i>
-                    <span>Suggest Organism</span>
+                    <span>Suggest Species</span>
                   </button>
                 </li>
                 <li className="menu-item">
@@ -486,7 +486,7 @@ const Homepage = () => {
         <div className={`fixed inset-0 ${isDark ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'} flex items-center justify-center z-50 p-4 sm:p-0`}>
           <div className={`${isDark ? 'bg-gray-800 border-green-600' : 'bg-white'} rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-auto border-t-4`}>
             <div className="text-center mb-6 sm:mb-8">
-              <div className="text-4xl mb-2">🔐</div>
+              <div className="text-4xl mb-2"><i className="fa-solid fa-key"></i></div>
               <h2 className={`text-2xl sm:text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>Admin Login</h2>
             </div>
             <form onSubmit={handleAdminLogin}>
@@ -549,7 +549,7 @@ const Homepage = () => {
                   </GoogleOAuthProvider>
                 </div>
                 <p className={`text-center text-xs mt-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Only authorized emails can access admin panel
+                  Only Authorized E-mails can Access Admin Panel
                 </p>
               </div>
             </form>
@@ -665,8 +665,8 @@ const OrganismDetail = () => {
     return (
       <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-green-50 to-blue-50'} flex items-center justify-center`}>
         <div className="text-center px-4">
-          <div className="text-6xl mb-6 animate-bounce">⏳</div>
-          <p className="text-lg font-semibold text-gray-800">Loading organism details...</p>
+          <div className="text-6xl mb-6 animate-bounce"><i className="fa-solid fa-spinner"></i></div>
+          <p className="text-lg font-semibold text-gray-800">Wait a Second....</p>
         </div>
       </div>
     );
@@ -676,12 +676,12 @@ const OrganismDetail = () => {
     return (
       <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-green-50 to-blue-50'} flex items-center justify-center`}>
         <div className="text-center px-4">
-          <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>Organism not found</h2>
+          <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>Sorry ! We can't Found Anything For You</h2>
           <button
             onClick={() => navigate('/')}
             className={`${isDark ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-6 py-2 rounded-lg transition-all`}
           >
-            Go Back Home
+             Back Home
           </button>
         </div>
       </div>
@@ -710,7 +710,7 @@ const OrganismDetail = () => {
             <div>
               {organism.images && organism.images.length > 0 && (
                 <div className="mb-6">
-                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>📸 Images</h3>
+                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}><i className="fa-regular fa-camera"></i> Images</h3>
                   <div className="grid gap-4">
                     {organism.images.map((image, index) => (
                       <div key={index} className={`flex items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-gray-50'} rounded-lg w-full h-48 sm:h-64 mx-auto`}>
@@ -727,7 +727,7 @@ const OrganismDetail = () => {
 
               {organism.qr_code_image && (
                 <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} p-4 sm:p-6 rounded-lg`}>
-                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>📱 QR Code</h3>
+                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}><i className="fa-solid fa-qrcode"></i> QR Code</h3>
                   <div className="text-center">
                     <img
                       src={organism.qr_code_image}
@@ -747,7 +747,7 @@ const OrganismDetail = () => {
               {/* Classification */}
               {organism.classification && (
                 <div>
-                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>🔬 Classification</h3>
+                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}><i className="fa-solid fa-microscope"></i> Classification</h3>
                   <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} p-4 rounded-lg`}>
                     {Object.entries(organism.classification).map(([key, value]) => (
                       <div key={key} className={`flex justify-between py-2 border-b last:border-b-0 ${isDark ? 'border-gray-600' : 'border-gray-200'}`}>
@@ -762,7 +762,7 @@ const OrganismDetail = () => {
               {/* Morphology */}
               {organism.morphology && (
                 <div>
-                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>🏗️ Morphology</h3>
+                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}><i className="fa-solid fa-hands-holding"></i> Morphology</h3>
                   <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} p-4 rounded-lg`}>
                     <p className={`${isDark ? 'text-gray-200' : 'text-gray-700'} whitespace-pre-line text-xs sm:text-sm`}>{organism.morphology}</p>
                   </div>
@@ -772,7 +772,7 @@ const OrganismDetail = () => {
               {/* Physiology */}
               {organism.physiology && (
                 <div>
-                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>⚡ Physiology</h3>
+                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}><i className="fa-solid fa-bolt"></i> Physiology</h3>
                   <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} p-4 rounded-lg`}>
                     <p className={`${isDark ? 'text-gray-200' : 'text-gray-700'} whitespace-pre-line text-xs sm:text-sm`}>{organism.physiology}</p>
                   </div>
@@ -782,7 +782,7 @@ const OrganismDetail = () => {
               {/* Description */}
               {organism.description && (
                 <div>
-                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}>📝 Description</h3>
+                  <h3 className={`text-lg sm:text-xl font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-800'}`}><i className="fa-solid fa-file-waveform"></i> Description</h3>
                   <div className={`${isDark ? 'bg-gray-700' : 'bg-gray-50'} p-4 rounded-lg`}>
                     <p className={`${isDark ? 'text-gray-200' : 'text-gray-700'} whitespace-pre-line text-xs sm:text-sm`}>{organism.description}</p>
                   </div>
@@ -840,7 +840,7 @@ const AdminPanel = () => {
       <header className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gradient-to-r from-purple-600 to-blue-600 border-purple-800'} shadow-lg border-b-4 sticky top-0 z-40`}>
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-lg sm:text-2xl font-bold text-white">🔧 Admin Panel</h1>
+            <h1 className="text-lg sm:text-2xl font-bold text-white"><i className="fa-solid fa-user-tie"></i> Admin Panel</h1>
             <div className="flex gap-2 sm:gap-3 items-center">
               <button
                 onClick={toggleTheme}
@@ -857,7 +857,7 @@ const AdminPanel = () => {
               <button
                 onClick={() => {
                   logout();
-                  showToast('👋 You have been logged out', 'success', 2500);
+                  showToast('Logged Out Successfully', 'success', 2500);
                   navigate('/');
                 }}
                 className="bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all flex items-center gap-1"
@@ -890,7 +890,7 @@ const AdminPanel = () => {
                 ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
                 : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
             >
-              📊 Dashboard
+              <i className="fa-solid fa-chart-simple"></i> Dashboard
             </button>
             <button
               onClick={() => setActiveView('add')}
@@ -898,7 +898,7 @@ const AdminPanel = () => {
                 ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
                 : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
             >
-              ➕ Add Organism
+              <i className="fa-solid fa-plus"></i> Add Organism
             </button>
             <button
               onClick={() => setActiveView('manage')}
@@ -906,7 +906,7 @@ const AdminPanel = () => {
                 ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
                 : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
             >
-              📝 Manage Organisms
+              <i className="fa-regular fa-pen-to-square"></i> Manage Organisms
             </button>
             <button
               onClick={() => setActiveView('suggestions')}
@@ -914,7 +914,7 @@ const AdminPanel = () => {
                 ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
                 : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
             >
-              💡 Suggested Organisms
+              <i className="fa-regular fa-lightbulb"></i> Suggested Organisms
             </button>
             <button
               onClick={() => setActiveView('users')}
@@ -922,7 +922,7 @@ const AdminPanel = () => {
                 ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
                 : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
             >
-              👥 Users History
+              <i className="fa-solid fa-user-clock"></i> Users History
             </button>
             <button
               onClick={() => setActiveView('biotube')}
@@ -930,7 +930,7 @@ const AdminPanel = () => {
                 ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
                 : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
             >
-              🎬 Biotube
+              <i className="fa-solid fa-clapperboard"></i> BioTube
             </button>
             <button
               onClick={() => setActiveView('blogs')}
@@ -938,7 +938,7 @@ const AdminPanel = () => {
                 ? `border-b-2 ${isDark ? 'border-purple-500 text-purple-400' : 'border-purple-600 text-purple-600'}` 
                 : `${isDark ? 'text-gray-400 hover:text-purple-400' : 'text-gray-600 hover:text-purple-600'}`}`}
             >
-              📚 Blogs
+              <i className="fa-solid fa-book"></i> Blogs
             </button>
           </div>
 
