@@ -5,14 +5,14 @@ const LanguageSelector = ({ isDark, onLanguageChange }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const languages = {
-    en: { name: 'English', flag: '🇺🇸' },
-    es: { name: 'Español', flag: '🇪🇸' },
-    fr: { name: 'Français', flag: '🇫🇷' },
-    de: { name: 'Deutsch', flag: '🇩🇪' },
-    hi: { name: 'हिन्दी', flag: '🇮🇳' },
-    pt: { name: 'Português', flag: '🇵🇹' },
-    ja: { name: '日本語', flag: '🇯🇵' },
-    zh: { name: '中文', flag: '🇨🇳' }
+    en: { name: 'English', icon: 'fa-globe', code: 'US' },
+    es: { name: 'Español', icon: 'fa-globe', code: 'ES' },
+    fr: { name: 'Français', icon: 'fa-globe', code: 'FR' },
+    de: { name: 'Deutsch', icon: 'fa-globe', code: 'DE' },
+    hi: { name: 'हिन्दी', icon: 'fa-globe', code: 'IN' },
+    pt: { name: 'Português', icon: 'fa-globe', code: 'PT' },
+    ja: { name: '日本語', icon: 'fa-globe', code: 'JP' },
+    zh: { name: '中文', icon: 'fa-globe', code: 'CN' }
   };
 
   useEffect(() => {
@@ -38,9 +38,9 @@ const LanguageSelector = ({ isDark, onLanguageChange }) => {
             : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
         }`}
       >
-        <span className="text-lg">{languages[currentLanguage].flag}</span>
+        <i className={`fas ${languages[currentLanguage].icon}`}></i>
         <span className="hidden sm:inline">{languages[currentLanguage].name}</span>
-        <span className="text-xs">▼</span>
+        <i className="fas fa-chevron-down text-xs"></i>
       </button>
 
       {/* Dropdown Menu */}
@@ -50,7 +50,7 @@ const LanguageSelector = ({ isDark, onLanguageChange }) => {
             isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
           }`}
         >
-          {Object.entries(languages).map(([code, { name, flag }]) => (
+          {Object.entries(languages).map(([code, { name, icon }]) => (
             <button
               key={code}
               onClick={() => handleLanguageChange(code)}
@@ -64,9 +64,9 @@ const LanguageSelector = ({ isDark, onLanguageChange }) => {
                   : 'hover:bg-gray-100 text-gray-900'
               }`}
             >
-              <span className="text-lg">{flag}</span>
+              <i className={`fas ${icon}`}></i>
               <span className="font-semibold">{name}</span>
-              {code === currentLanguage && <span className="ml-auto">✓</span>}
+              {code === currentLanguage && <i className="fas fa-check ml-auto"></i>}
             </button>
           ))}
         </div>

@@ -34,7 +34,7 @@ const AboutUs = ({ isDark }) => {
       <header className={`${isDark ? 'bg-gray-800' : 'bg-gray-700'} shadow-lg sticky top-0 z-50`}>
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex justify-between items-center">
-            <h1 className="text-lg sm:text-2xl font-bold text-yellow-400">🌿 BioMuseum</h1>
+            <h1 className="text-lg sm:text-2xl font-bold text-yellow-400"><i className="fas fa-leaf mr-2"></i>BioMuseum</h1>
             <button
               onClick={() => navigate('/')}
               className={`${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' : 'bg-gray-600 hover:bg-gray-500 text-gray-200'} px-3 sm:px-4 py-2 rounded font-semibold text-xs sm:text-sm transition-all duration-200`}
@@ -76,7 +76,7 @@ const AboutUs = ({ isDark }) => {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className={`p-4 sm:p-6 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <div className="text-2xl sm:text-3xl mb-3">🔬</div>
+                  <div className="text-2xl sm:text-3xl mb-3"><i className="fas fa-microscope"></i></div>
                   <h4 className={`text-base sm:text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
                     Interactive Exploration
                   </h4>
@@ -85,7 +85,7 @@ const AboutUs = ({ isDark }) => {
                   </p>
                 </div>
                 <div className={`p-4 sm:p-6 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <div className="text-2xl sm:text-3xl mb-3">📚</div>
+                  <div className="text-2xl sm:text-3xl mb-3"><i className="fas fa-book"></i></div>
                   <h4 className={`text-base sm:text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
                     Educational Content
                   </h4>
@@ -94,7 +94,7 @@ const AboutUs = ({ isDark }) => {
                   </p>
                 </div>
                 <div className={`p-4 sm:p-6 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <div className="text-2xl sm:text-3xl mb-3">🎬</div>
+                  <div className="text-2xl sm:text-3xl mb-3"><i className="fas fa-video"></i></div>
                   <h4 className={`text-base sm:text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
                     BioTube Videos
                   </h4>
@@ -103,7 +103,7 @@ const AboutUs = ({ isDark }) => {
                   </p>
                 </div>
                 <div className={`p-4 sm:p-6 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <div className="text-2xl sm:text-3xl mb-3">👥</div>
+                  <div className="text-2xl sm:text-3xl mb-3"><i className="fas fa-users"></i></div>
                   <h4 className={`text-base sm:text-lg font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
                     Community Contribution
                   </h4>
@@ -197,7 +197,7 @@ const AboutUs = ({ isDark }) => {
 
           {/* Footer Info */}
           <div className={`text-center text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            <p className="mb-2">© Made with ❤️ @ Chh. Sambhaji Nagar</p>
+            <p className="mb-2">© Made with <i className="fas fa-heart text-red-500"></i> @ Chh. Sambhaji Nagar</p>
             <p>All rights reserved. BioMuseum - Interactive Biology Museum</p>
           </div>
         </div>

@@ -87,7 +87,7 @@ const BlogAdminPanel = ({ token, isDark }) => {
     } catch (error) {
       console.error('Error generating blog:', error.response?.data || error.message);
       const errorMsg = error.response?.data?.detail || error.message || 'Unknown error';
-      alert(`❌ Error generating blog:\n${errorMsg}\n\nMake sure:\n1. Gemini API key is configured in backend .env\n2. API key has access to gemini-pro model`);
+      alert(`<i className="fas fa-times-circle"></i> Error generating blog:\n${errorMsg}\n\nMake sure:\n1. Gemini API key is configured in backend .env\n2. API key has access to gemini-pro model`);
     } finally {
       setGeneratingAI(false);
     }
@@ -163,7 +163,7 @@ const BlogAdminPanel = ({ token, isDark }) => {
       {/* Header */}
       <div className={`${isDark ? 'bg-gray-800' : 'bg-gray-700'} shadow-lg sticky top-0 z-40`}>
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-yellow-400">📚 Blog Admin Panel</h1>
+          <h1 className="text-2xl font-bold text-yellow-400"><i className="fas fa-book mr-2"></i>Blog Admin Panel</h1>
         </div>
       </div>
 
@@ -180,10 +180,10 @@ const BlogAdminPanel = ({ token, isDark }) => {
                   : `border-transparent ${isDark ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900'}`
               }`}
             >
-              {tab === 'dashboard' && '📊 Dashboard'}
-              {tab === 'add' && '➕ Add'}
-              {tab === 'manage' && '✏️ Manage'}
-              {tab === 'suggestions' && '💡 Suggestions'}
+              {tab === 'dashboard' && <><i className="fas fa-chart-line mr-1"></i>Dashboard</>}
+              {tab === 'add' && <><i className="fas fa-plus mr-1"></i>Add</>}
+              {tab === 'manage' && <><i className="fas fa-edit mr-1"></i>Manage</>}
+              {tab === 'suggestions' && <><i className="fas fa-lightbulb mr-1"></i>Suggestions</>}
             </button>
           ))}
         </div>
@@ -211,7 +211,7 @@ const BlogAdminPanel = ({ token, isDark }) => {
                         <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Total Blogs</h3>
                         <p className="text-4xl font-bold text-blue-500">{dashboard.total_blogs || 0}</p>
                       </div>
-                      <div className="text-5xl opacity-30">📚</div>
+                      <div className="text-5xl opacity-30"><i className="fas fa-book"></i></div>
                     </div>
                   </div>
                   <div className={`p-6 rounded-xl ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} shadow-lg hover:shadow-xl transition-all`}>
@@ -220,7 +220,7 @@ const BlogAdminPanel = ({ token, isDark }) => {
                         <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Total Views</h3>
                         <p className="text-4xl font-bold text-green-500">{dashboard.total_views || 0}</p>
                       </div>
-                      <div className="text-5xl opacity-30">👁️</div>
+                      <div className="text-5xl opacity-30"><i className="fas fa-eye"></i></div>
                     </div>
                   </div>
                   <div className={`p-6 rounded-xl ${isDark ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'} shadow-lg hover:shadow-xl transition-all`}>
@@ -229,14 +229,14 @@ const BlogAdminPanel = ({ token, isDark }) => {
                         <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Total Likes</h3>
                         <p className="text-4xl font-bold text-red-500">{dashboard.total_likes || 0}</p>
                       </div>
-                      <div className="text-5xl opacity-30">❤️</div>
+                      <div className="text-5xl opacity-30"><i className="fas fa-heart"></i></div>
                     </div>
                   </div>
                 </div>
 
                 {dashboard.recent_blogs && dashboard.recent_blogs.length > 0 && (
                   <div>
-                    <h2 className={`text-2xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>📈 Recent Blogs</h2>
+                    <h2 className={`text-2xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}><i className="fas fa-chart-bar mr-2"></i>Recent Blogs</h2>
                     <div className="grid gap-4">
                       {dashboard.recent_blogs.map(blog => (
                         <div key={blog.id} className={`p-4 rounded-lg ${isDark ? 'bg-gray-800 border border-gray-700 hover:border-gray-600' : 'bg-white border border-gray-200 hover:border-gray-300'} transition-all`}>
@@ -246,7 +246,7 @@ const BlogAdminPanel = ({ token, isDark }) => {
                               <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{blog.subject}</p>
                             </div>
                             <span className={`text-xs font-semibold px-3 py-1 rounded-full ${isDark ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
-                              {blog.is_ai_generated ? '🤖 AI' : '✏️ Manual'}
+                              {blog.is_ai_generated ? <><i className="fas fa-robot mr-1"></i>AI</> : <><i className="fas fa-edit mr-1"></i>Manual</>}
                             </span>
                           </div>
                           <div className={`text-sm mt-2 flex gap-4 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>

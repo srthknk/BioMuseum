@@ -127,7 +127,7 @@ const BiotubeVideoPage = ({ isDark }) => {
     return (
       <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
         <div className="text-center">
-          <div className="text-4xl mb-4">🎬</div>
+          <div className="text-4xl mb-4"><i className="fas fa-video"></i></div>
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Loading video...</p>
         </div>
       </div>
@@ -198,7 +198,7 @@ const BiotubeVideoPage = ({ isDark }) => {
                     : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-300 text-gray-700'
                 }`}
               >
-                🎬 Normal
+                <i className="fas fa-video mr-2"></i>Normal
               </button>
               <button
                 onClick={() => setPlayerMode('theater')}
@@ -208,7 +208,7 @@ const BiotubeVideoPage = ({ isDark }) => {
                     : isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-300 text-gray-700'
                 }`}
               >
-                🎭 Theater Mode
+                <i className="fas fa-window-maximize mr-2"></i>Theater Mode
               </button>
             </div>
 
@@ -242,7 +242,7 @@ const BiotubeVideoPage = ({ isDark }) => {
               {/* Description */}
               <div>
                 <h2 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  📝 Description
+                  <i className="fas fa-file-alt mr-2"></i>Description
                 </h2>
                 <p className={`text-base leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                   {video.description || 'No description available for this video.'}
@@ -252,7 +252,7 @@ const BiotubeVideoPage = ({ isDark }) => {
               {/* Comments Section */}
               <div className="mt-8">
                 <h2 className={`text-lg font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  💬 Comments ({comments.length})
+                  <i className="fas fa-comment mr-2"></i>Comments ({comments.length})
                 </h2>
 
                 {/* Add Comment Form - Always visible */}
@@ -335,7 +335,7 @@ const BiotubeVideoPage = ({ isDark }) => {
                               : 'text-blue-600 hover:text-blue-700'
                           }`}
                         >
-                          👍 Like ({comment.likes})
+                          <i className="fas fa-thumbs-up mr-2"></i>Like ({comment.likes})
                         </button>
                       </div>
                     ))}
@@ -350,7 +350,7 @@ const BiotubeVideoPage = ({ isDark }) => {
           {playerMode !== 'theater' && (
             <div className="lg:col-span-1">
               <h2 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                🎥 Related Videos
+                <i className="fas fa-film mr-2"></i>Related Videos
               </h2>
 
               <div className="space-y-4">
@@ -378,7 +378,7 @@ const BiotubeVideoPage = ({ isDark }) => {
                           }}
                         />
                         <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all flex items-center justify-center">
-                          <div className="text-white text-2xl">▶</div>
+                          <div className="text-white text-2xl"><i className="fas fa-play"></i></div>
                         </div>
                       </div>
 

@@ -26,17 +26,17 @@ const Leaderboard = ({ isDark }) => {
     }
   };
 
-  const getBadgeEmoji = (badge_id) => {
+  const getBadgeIcon = (badge_id) => {
     const badges = {
-      'first_submission': '🌱',
-      '10_submissions': '⭐',
-      '25_submissions': '🌟',
-      '50_submissions': '👑',
-      'verified_master': '✅',
-      '100_points': '💎',
-      '500_points': '🧠'
+      'first_submission': { class: 'fa-leaf', color: 'text-green-500' },
+      '10_submissions': { class: 'fa-star', color: 'text-yellow-400' },
+      '25_submissions': { class: 'fa-star', color: 'text-yellow-400' },
+      '50_submissions': { class: 'fa-crown', color: 'text-purple-500' },
+      'verified_master': { class: 'fa-check-circle', color: 'text-green-500' },
+      '100_points': { class: 'fa-gem', color: 'text-blue-500' },
+      '500_points': { class: 'fa-brain', color: 'text-pink-500' }
     };
-    return badges[badge_id] || '🏅';
+    return badges[badge_id] || { class: 'fa-medal', color: 'text-gray-500' };
   };
 
   const getLevelColor = (level) => {
@@ -57,7 +57,7 @@ const Leaderboard = ({ isDark }) => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className={`text-3xl sm:text-4xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
-            🏆 Leaderboard
+            <i className="fas fa-trophy text-yellow-500 mr-2"></i>Leaderboard
           </h1>
           <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>
             Top contributors to BioMuseum
@@ -67,9 +67,9 @@ const Leaderboard = ({ isDark }) => {
         {/* Filter Buttons */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {[
-            { id: 'points', label: '⭐ Points' },
-            { id: 'submissions', label: '📝 Submissions' },
-            { id: 'verified', label: '✅ Verified' }
+            { id: 'points', label: <><i className="fas fa-star mr-1"></i>Points</> },
+            { id: 'submissions', label: <><i className="fas fa-file-alt mr-1"></i>Submissions</> },
+            { id: 'verified', label: <><i className="fas fa-check-circle mr-1"></i>Verified</> }
           ].map(btn => (
             <button
               key={btn.id}
@@ -106,7 +106,7 @@ const Leaderboard = ({ isDark }) => {
                   <div className={`font-bold text-lg w-8 ${
                     index < 3 ? 'text-yellow-400' : isDark ? 'text-gray-400' : 'text-gray-600'
                   }`}>
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                    {index === 0 ? <i className="fas fa-medal text-yellow-400 text-xl"></i> : index === 1 ? <i className="fas fa-medal text-gray-400 text-xl"></i> : index === 2 ? <i className="fas fa-medal text-orange-400 text-xl"></i> : <span>{index + 1}</span>}
                   </div>
 
                   {/* User Info */}
@@ -141,17 +141,17 @@ const Leaderboard = ({ isDark }) => {
         {/* Badges Section */}
         <div className={`mt-8 rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
           <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            🎖️ Available Badges
+            <i className="fas fa-award text-purple-500 mr-2"></i>Available Badges
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {[
-              { emoji: '🌱', name: 'First Step', desc: '1 suggestion' },
-              { emoji: '⭐', name: 'Active', desc: '10 suggestions' },
-              { emoji: '🌟', name: 'Super', desc: '25 suggestions' },
-              { emoji: '👑', name: 'Legend', desc: '50 suggestions' },
-              { emoji: '✅', name: 'Verified', desc: '10 verified' },
-              { emoji: '💎', name: 'Collector', desc: '100 points' },
-              { emoji: '🧠', name: 'Master Mind', desc: '500 points' }
+              { icon: 'fa-leaf', color: 'text-green-500', name: 'First Step', desc: '1 suggestion' },
+              { icon: 'fa-star', color: 'text-yellow-400', name: 'Active', desc: '10 suggestions' },
+              { icon: 'fa-star', color: 'text-yellow-400', name: 'Super', desc: '25 suggestions' },
+              { icon: 'fa-crown', color: 'text-purple-500', name: 'Legend', desc: '50 suggestions' },
+              { icon: 'fa-check-circle', color: 'text-green-500', name: 'Verified', desc: '10 verified' },
+              { icon: 'fa-gem', color: 'text-blue-500', name: 'Collector', desc: '100 points' },
+              { icon: 'fa-brain', color: 'text-pink-500', name: 'Master Mind', desc: '500 points' }
             ].map((badge, idx) => (
               <div
                 key={idx}
@@ -159,7 +159,7 @@ const Leaderboard = ({ isDark }) => {
                   isDark ? 'bg-gray-700' : 'bg-gray-100'
                 }`}
               >
-                <div className="text-4xl mb-2">{badge.emoji}</div>
+                <div className={`text-4xl mb-2 ${badge.color}`}><i className={`fas ${badge.icon}`}></i></div>
                 <div className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {badge.name}
                 </div>

@@ -53,11 +53,11 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
           const res = await axios.get(`${API}/admin/biotube/suggestions`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          console.log('✅ Suggestions API Response:', res.data);
+          console.log('<i className="fas fa-check-circle"></i> Suggestions API Response:', res.data);
           console.log('Number of suggestions:', res.data?.length || 0);
           setSuggestions(Array.isArray(res.data) ? res.data : []);
         } catch (apiError) {
-          console.error('❌ Error fetching suggestions:', apiError);
+          console.error('<i className="fas fa-times-circle"></i> Error fetching suggestions:', apiError);
           console.error('Error status:', apiError.response?.status);
           console.error('Error data:', apiError.response?.data);
           setSuggestions([]);
@@ -70,7 +70,7 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
         setUserHistory(res.data);
       }
     } catch (error) {
-      console.error('❌ Error fetching data:', error);
+      console.error('<i className="fas fa-times-circle"></i> Error fetching data:', error);
       console.error('Error details:', error.response?.data || error.message);
       if (activeTab === 'suggestions') {
         setSuggestions([]);
@@ -90,7 +90,7 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      setSuccessMessage('✅ Video added successfully!');
+      setSuccessMessage('<i className="fas fa-check-circle"></i> Video added successfully!');
       setFormData({
         title: '',
         youtube_url: '',
@@ -108,7 +108,7 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
         setSuccessMessage('');
       }, 1500);
     } catch (error) {
-      setSuccessMessage(`❌ Error: ${error.response?.data?.detail || 'Failed to add video'}`);
+      setSuccessMessage(`<i className="fas fa-times-circle"></i> Error: ${error.response?.data?.detail || 'Failed to add video'}`);
     } finally {
       setSubmitLoading(false);
     }
@@ -121,11 +121,11 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
       await axios.delete(`${API}/admin/biotube/videos/${videoId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setSuccessMessage('✅ Video deleted successfully!');
+      setSuccessMessage('<i className="fas fa-check-circle"></i> Video deleted successfully!');
       fetchData();
       setTimeout(() => setSuccessMessage(''), 2000);
     } catch (error) {
-      setSuccessMessage('❌ Error deleting video');
+      setSuccessMessage('<i className="fas fa-times-circle"></i> Error deleting video');
     }
   };
 
@@ -136,13 +136,13 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
       await axios.delete(`${API}/admin/biotube/suggestions/${suggestionId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setSuccessMessage('✅ Suggestion deleted successfully!');
+      setSuccessMessage('<i className="fas fa-check-circle"></i> Suggestion deleted successfully!');
       setTimeout(() => {
         fetchData();
         setSuccessMessage('');
       }, 1500);
     } catch (error) {
-      setSuccessMessage(`❌ Error: ${error.response?.data?.detail || 'Failed to delete suggestion'}`);
+      setSuccessMessage(`<i className="fas fa-times-circle"></i> Error: ${error.response?.data?.detail || 'Failed to delete suggestion'}`);
     }
   };
 
@@ -153,11 +153,11 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setSuccessMessage(`✅ Suggestion marked as "${newStatus}"!`);
+      setSuccessMessage(`<i className="fas fa-check-circle"></i> Suggestion marked as "${newStatus}"!`);
       fetchData();
       setTimeout(() => setSuccessMessage(''), 2000);
     } catch (error) {
-      setSuccessMessage('❌ Error updating suggestion');
+      setSuccessMessage('<i className="fas fa-times-circle"></i> Error updating suggestion');
     }
   };
 
@@ -177,7 +177,7 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
       <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b shadow-sm`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            🎬 BioTube Admin Panel
+            <i className="fas fa-video text-purple-500 mr-2"></i>BioTube Admin Panel
           </h1>
           <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Manage Videos, Suggestions, and User Content
@@ -189,11 +189,11 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
       <div className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b sticky top-0 z-40`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-0 overflow-x-auto">
           {[
-            { id: 'dashboard', label: '📊 Dashboard' },
-            { id: 'add', label: '➕ Add Video' },
-            { id: 'manage', label: '📝 Manage Videos' },
-            { id: 'suggestions', label: '💡 Suggestions' },
-            { id: 'history', label: '👥 User History' }
+            { id: 'dashboard', label: <><i className="fas fa-chart-line mr-1"></i>Dashboard</> },
+            { id: 'add', label: <><i className="fas fa-plus mr-1"></i>Add Video</> },
+            { id: 'manage', label: <><i className="fas fa-file-alt mr-1"></i>Manage Videos</> },
+            { id: 'suggestions', label: <><i className="fas fa-lightbulb mr-1"></i>Suggestions</> },
+            { id: 'history', label: <><i className="fas fa-users mr-1"></i>User History</> }
           ].map(tab => (
             <button
               key={tab.id}
@@ -232,15 +232,15 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
             {/* DASHBOARD TAB */}
             {activeTab === 'dashboard' && dashboard && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard isDark={isDark} icon="🎬" title="Total Videos" value={dashboard.total_videos} />
-                <StatCard isDark={isDark} icon="👁️" title="Public Videos" value={dashboard.public_videos} />
-                <StatCard isDark={isDark} icon="💡" title="Pending Suggestions" value={dashboard.pending_suggestions} />
-                <StatCard isDark={isDark} icon="🏷️" title="Categories" value={dashboard.categories_count} />
+                <StatCard isDark={isDark} icon={<i className="fas fa-video"></i>} title="Total Videos" value={dashboard.total_videos} />
+                <StatCard isDark={isDark} icon={<i className="fas fa-eye"></i>} title="Public Videos" value={dashboard.public_videos} />
+                <StatCard isDark={isDark} icon={<i className="fas fa-lightbulb"></i>} title="Pending Suggestions" value={dashboard.pending_suggestions} />
+                <StatCard isDark={isDark} icon={<i className="fas fa-tags"></i>} title="Categories" value={dashboard.categories_count} />
 
                 {/* Recently Added */}
                 <div className={`lg:col-span-4 rounded-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
                   <h2 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                    📺 Recently Added
+                    <i className="fas fa-tv mr-2"></i>Recently Added
                   </h2>
                   <div className="space-y-3">
                     {dashboard.recently_added && dashboard.recently_added.length > 0 ? (
@@ -416,7 +416,7 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
                     disabled={submitLoading}
                     className="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-500 text-white font-semibold rounded-lg transition-all"
                   >
-                    {submitLoading ? 'Adding...' : '✅ Add Video'}
+                    {submitLoading ? 'Adding...' : <><i className="fas fa-check-circle mr-1"></i>Add Video</>}
                   </button>
                 </form>
               </div>
@@ -563,7 +563,7 @@ const BiotubeAdminPanel = ({ token, isDark }) => {
                         onClick={() => handleUpdateSuggestionStatus(sugg.id, 'reviewed')}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-all"
                       >
-                        ✅ Reviewed
+                        <i className="fas fa-check-circle mr-1"></i>Reviewed
                       </button>
                       <button
                         onClick={() => handleUpdateSuggestionStatus(sugg.id, 'added')}

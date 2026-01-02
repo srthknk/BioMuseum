@@ -64,7 +64,7 @@ const AIAssistant = ({ onDataSelected, onClose }) => {
             onClick={onClose}
             className="text-2xl hover:scale-110 transition-transform"
           >
-            ✕
+            <i className="fas fa-times"></i>
           </button>
         </div>
 
@@ -91,18 +91,18 @@ const AIAssistant = ({ onDataSelected, onClose }) => {
               >
                 {loading ? (
                   <>
-                    <span className="animate-spin">⚙️</span> Generating...
+                    <i className="fas fa-cog animate-spin"></i> Generating...
                   </>
                 ) : (
                   <>
-                    <span>✨</span>Generate
+                    <i className="fas fa-wand-magic-sparkles"></i>Generate
                   </>
                 )}
               </button>
             </div>
             {error && (
               <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                <span>⚠️</span> {error}
+                <i className="fas fa-exclamation-triangle"></i> {error}
               </p>
             )}
           </div>
@@ -113,7 +113,7 @@ const AIAssistant = ({ onDataSelected, onClose }) => {
               {/* Organism Data Preview */}
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                  <span>📋</span> Organism Data
+                  <i className="fas fa-list"></i> Organism Data
                 </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -236,7 +236,7 @@ const AIAssistant = ({ onDataSelected, onClose }) => {
                   onClick={handleUseData}
                   className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2"
                 >
-                  <span>✅</span> Use This Data
+                  <i className="fas fa-check-circle"></i> Use This Data
                 </button>
                 <button
                   onClick={() => {
@@ -256,7 +256,7 @@ const AIAssistant = ({ onDataSelected, onClose }) => {
           {/* Empty State */}
           {!generatedData && !loading && (
             <div className="text-center py-12 text-gray-500">
-              <div className="text-5xl mb-4">🔍</div>
+              <div className="text-5xl mb-4"><i className="fas fa-search"></i></div>
               <p className="text-lg font-medium">Enter an animal name to get started!</p>
               <p className="text-sm mt-2">Try: Any Animal or Organims in Your Mind</p>
             </div>

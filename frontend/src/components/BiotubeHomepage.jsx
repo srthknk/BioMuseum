@@ -145,7 +145,7 @@ const BiotubeHomepage = ({ isDark }) => {
             </a>
             <div className="min-w-0 flex-1">
               <h1 className={`text-xl sm:text-3xl font-bold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                🎬 BioTube
+                <i className="fas fa-video mr-2"></i>BioTube
               </h1>
               <p className={`text-xs sm:text-sm truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                 Explore Biology Videos
@@ -156,7 +156,7 @@ const BiotubeHomepage = ({ isDark }) => {
             onClick={() => setShowSuggestModal(true)}
             className="px-2 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all text-xs sm:text-base whitespace-nowrap"
           >
-            💡 <span className="hidden sm:inline">Suggest</span>
+            <i className="fas fa-lightbulb mr-2"></i><span className="hidden sm:inline">Suggest</span>
           </button>
         </div>
       </div>
@@ -167,7 +167,7 @@ const BiotubeHomepage = ({ isDark }) => {
           {/* Search Bar */}
           <div className="mb-3 sm:mb-4">
             <div className={`relative flex items-center ${isDark ? 'bg-gray-700' : 'bg-gray-100'} rounded-full px-3 sm:px-4 py-2`}>
-              <span className="text-lg sm:text-2xl mr-2 sm:mr-3">🔍</span>
+              <span className="text-lg sm:text-2xl mr-2 sm:mr-3"><i className="fas fa-search"></i></span>
               <input
                 type="text"
                 placeholder="Search videos..."
@@ -188,7 +188,7 @@ const BiotubeHomepage = ({ isDark }) => {
                   : 'bg-purple-500 hover:bg-purple-600 text-white'
               }`}
             >
-              ⚙️ <span className="hidden sm:inline">Filters</span>
+              <i className="fas fa-sliders-h mr-2"></i><span className="hidden sm:inline">Filters</span>
             </button>
 
             {Object.values(filters).some(f => f !== '') && (
@@ -200,7 +200,7 @@ const BiotubeHomepage = ({ isDark }) => {
                     : 'bg-gray-300 hover:bg-gray-400 text-gray-800'
                 }`}
               >
-                ✕ <span className="hidden sm:inline">Clear</span>
+                <i className="fas fa-times mr-2"></i><span className="hidden sm:inline">Clear</span>
               </button>
             )}
 
@@ -328,12 +328,12 @@ const BiotubeHomepage = ({ isDark }) => {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-12">
         {loading ? (
           <div className="text-center py-12">
-            <div className={`text-2xl mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>🎬</div>
+            <div className={`text-2xl mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><i className="fas fa-video"></i></div>
             <p className={isDark ? 'text-gray-400' : 'text-gray-600'}>Loading videos...</p>
           </div>
         ) : filteredVideos.length === 0 ? (
           <div className={`text-center py-12 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-            <div className={`text-4xl mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>📺</div>
+            <div className={`text-4xl mb-4 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}><i className="fas fa-tv"></i></div>
             <p className={`text-lg font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               No videos found
             </p>
@@ -456,13 +456,13 @@ const SuggestVideoModal = ({ isDark, onClose, onSuccess, apiUrl }) => {
       <div className={`${isDark ? 'bg-gray-900' : 'bg-white'} rounded-xl p-6 w-full max-w-md shadow-2xl`}>
         <div className="flex justify-between items-center mb-4">
           <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            💡 Suggest a Video
+            <i className="fas fa-lightbulb mr-2"></i>Suggest a Video
           </h2>
           <button
             onClick={onClose}
             className={`text-2xl ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-black'}`}
           >
-            ✕
+            <i className="fas fa-times"></i>
           </button>
         </div>
 
